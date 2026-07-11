@@ -1,0 +1,45 @@
+Third-Party Notices — Before the Storm Access
+=============================================
+
+This package redistributes the following unmodified third-party components.
+Full license texts are available at the linked repositories.
+
+- BepInEx (plugin loader: BepInEx\core, winhttp.dll, doorstop_config.ini)
+  Source: https://github.com/BepInEx/BepInEx
+  License: LGPL-2.1
+  Copyright (c) 2018 Bepis
+
+- HarmonyX / 0Harmony.dll (runtime patching, shipped as part of BepInEx)
+  Source: https://github.com/BepInEx/HarmonyX
+  License: MIT
+  Based on Harmony by Andreas Pardeike (MIT),
+  https://github.com/pardeike/Harmony
+
+- MonoMod (MonoMod.RuntimeDetour.dll, MonoMod.Utils.dll, shipped as part of BepInEx)
+  Source: https://github.com/MonoMod/MonoMod
+  License: MIT
+  Copyright (c) 2015-2020 0x0ade
+
+- Mono.Cecil (Mono.Cecil*.dll, shipped as part of BepInEx)
+  Source: https://github.com/jbevain/cecil
+  License: MIT
+  Copyright (c) 2008-2015 Jb Evain, (c) 2008-2011 Novell, Inc.
+
+- Tolk (Tolk.dll — screen reader abstraction library)
+  Source: https://github.com/dkager/tolk
+  License: GNU LGPL v3
+  Copyright (c) 2014-2016 Davy Kager
+
+- NVDA Controller Client (nvdaControllerClient64.dll)
+  Source: https://github.com/nvaccess/nvda
+  License: GNU LGPL v2.1 (with the controller client's linking exception; see
+  the copying.txt distributed with the NVDA controller client)
+  Copyright (c) NV Access Limited
+
+The LGPL-licensed components above are dynamically linked, unmodified
+binaries. Their source code is available at the linked repositories. You may
+replace these DLLs with your own builds of the same libraries.
+
+Before the Storm Access itself does not include or redistribute any assets or
+code from Life is Strange: Before the Storm. It requires your own copy of the
+game.

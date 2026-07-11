@@ -1,0 +1,15 @@
+# Build output
+bin/
+obj/
+dist/
+
+# Decompiled game code — copyrighted, never commit
+decompiled/
+
+# Stray VS scaffold, not part of the mod
+Accessibility before the storm/
+
+# Tooling caches
+*.lscache
+*.user
+.vs/
