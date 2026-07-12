@@ -205,20 +205,33 @@ namespace BeforeTheStormAccess
             }
         }
 
+        /// <summary>
+        /// Announces labels that changed text OR became visible again inside an
+        /// open window. Visibility matters for paged content (journal, SMS): when
+        /// the user flips back to an earlier page its labels re-enter the visible
+        /// set with unchanged text and must be re-read, so labels that leave the
+        /// visible set are forgotten. New/changed labels are batched into one
+        /// announcement in reading order rather than spoken fragment by fragment.
+        /// </summary>
         private void AnnounceLabelChanges(T_D25B278 window, string windowName)
         {
             List<LabelEntry> labels = CollectVisibleLabels(window);
+            Dictionary<string, bool> currentKeys = new Dictionary<string, bool>();
+            StringBuilder batch = new StringBuilder();
+
             for (int i = 0; i < labels.Count; i++)
             {
                 LabelEntry entry = labels[i];
                 string key = windowName + "/" + entry.Path;
+                currentKeys[key] = true;
 
                 string last;
-                _labelLastText.TryGetValue(key, out last);
-                if (entry.Text == last)
-                    continue;
-
+                bool wasVisible = _labelLastText.TryGetValue(key, out last);
+                bool newOrChanged = !wasVisible || entry.Text != last;
                 _labelLastText[key] = entry.Text;
+
+                if (!newOrChanged)
+                    continue;
 
                 // Labels inside menu-list buttons (settings values, button captions)
                 // are read by the focus handler with their row context; announcing
@@ -230,8 +243,30 @@ namespace BeforeTheStormAccess
                     continue;
 
                 DebugLogger.Log(LogCategory.Handler, "WindowWatcher",
-                    "label change " + key + " -> " + entry.Text);
-                ScreenReader.SayCoalesced(entry.Text, true, false);
+                    (wasVisible ? "label change " : "label visible ") + key + " -> " + entry.Text);
+                if (batch.Length > 0)
+                    batch.Append(" ");
+                batch.Append(entry.Text).Append(".");
+            }
+
+            // Forget labels that left the visible set (hidden pages/tabs) so they
+            // re-announce when they come back.
+            List<string> hidden = new List<string>();
+            string prefix = windowName + "/";
+            foreach (KeyValuePair<string, string> pair in _labelLastText)
+            {
+                if (pair.Key.StartsWith(prefix) && !currentKeys.ContainsKey(pair.Key))
+                    hidden.Add(pair.Key);
+            }
+
+            for (int i = 0; i < hidden.Count; i++)
+            {
+                _labelLastText.Remove(hidden[i]);
+            }
+
+            if (batch.Length > 0)
+            {
+                ScreenReader.SayCoalesced(batch.ToString(), true, true);
             }
         }
 
