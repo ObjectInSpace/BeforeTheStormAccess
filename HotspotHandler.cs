@@ -313,13 +313,33 @@ namespace BeforeTheStormAccess
             return TextUtil.CleanLabel(name);
         }
 
-        /// <summary>"{distance} meters at {clock} o'clock" from the player.</summary>
+        /// <summary>
+        /// "{distance} meters at {clock} o'clock[, slightly up]" from the player.
+        /// Elevation is measured camera-to-aim-point (the hotspot's m_pointAt when
+        /// authored) so it directly answers "where do I point the camera".
+        /// </summary>
         private static string DescribeRelativePosition(T_6FD30C1C hotspot)
         {
             Vector3 origin = SpatialUtil.PlayerPosition();
-            float distance = (hotspot.transform.position - origin).magnitude;
-            int hour = SpatialUtil.ClockHour(origin, SpatialUtil.PlayerForward(), hotspot.transform.position);
-            return Loc.Get("distance_clock", SpatialUtil.FormatDistance(distance), hour);
+            Vector3 aimPoint = GetAimPoint(hotspot);
+            float distance = (aimPoint - origin).magnitude;
+            int hour = SpatialUtil.ClockHour(origin, SpatialUtil.PlayerForward(), aimPoint);
+            string text = Loc.Get("distance_clock", SpatialUtil.FormatDistance(distance), hour);
+
+            string elevation = SpatialUtil.DescribeElevation(aimPoint);
+            if (elevation.Length > 0)
+                text += ", " + elevation;
+
+            return text;
+        }
+
+        /// <summary>The point the game wants the camera aimed at for this hotspot.</summary>
+        internal static Vector3 GetAimPoint(T_6FD30C1C hotspot)
+        {
+            if (hotspot.m_pointAt != null)
+                return hotspot.m_pointAt.transform.position;
+
+            return hotspot.transform.position;
         }
 
         /// <summary>

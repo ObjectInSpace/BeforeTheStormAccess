@@ -243,6 +243,11 @@ namespace BeforeTheStormAccess
             Add("hotspot_cycle", "{0} of {1}: {2}, {3}.");
             Add("hotspot_detail", "{0}, {1}.");
             Add("distance_clock", "{0} meters at {1} o'clock");
+            Add("elev_slightly_up", "slightly up");
+            Add("elev_up_high", "up high");
+            Add("elev_slightly_down", "slightly down");
+            Add("elev_down_low", "down low");
+            Add("nav_aim", "Aim at {0} o'clock");
 
             Add("bt_started", "Backtalk challenge against {0}. Win {1} points.");
             Add("bt_unknown_opponent", "your opponent");

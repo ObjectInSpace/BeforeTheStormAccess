@@ -53,5 +53,40 @@ namespace BeforeTheStormAccess
         {
             return meters < 10f ? meters.ToString("0.0") : Mathf.RoundToInt(meters).ToString();
         }
+
+        /// <summary>
+        /// Camera position for aim-related math; player head height as fallback.
+        /// </summary>
+        public static Vector3 CameraPosition()
+        {
+            Camera camera = Camera.main;
+            if (camera != null)
+                return camera.transform.position;
+
+            return PlayerPosition() + Vector3.up * 1.6f;
+        }
+
+        /// <summary>
+        /// Speech fragment for the vertical angle from the camera to a target:
+        /// empty when roughly level (within 10 degrees), "slightly up/down" to 30
+        /// degrees, "up high"/"down low" beyond. Tells the user where to point the
+        /// camera for small or off-level objects (photos, phones, wall posters).
+        /// </summary>
+        public static string DescribeElevation(Vector3 target)
+        {
+            Vector3 delta = target - CameraPosition();
+            float horizontal = Mathf.Sqrt(delta.x * delta.x + delta.z * delta.z);
+            float pitch = Mathf.Atan2(delta.y, horizontal) * Mathf.Rad2Deg;
+
+            if (pitch > 30f)
+                return Loc.Get("elev_up_high");
+            if (pitch > 10f)
+                return Loc.Get("elev_slightly_up");
+            if (pitch < -30f)
+                return Loc.Get("elev_down_low");
+            if (pitch < -10f)
+                return Loc.Get("elev_slightly_down");
+            return string.Empty;
+        }
     }
 }

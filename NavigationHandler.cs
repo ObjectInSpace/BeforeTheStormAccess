@@ -125,7 +125,18 @@ namespace BeforeTheStormAccess
 
             if (total <= ArriveDistance)
             {
-                ScreenReader.Say(Loc.Get("nav_arrived", HotspotHandler.GetHotspotName(_guidanceTarget)), true, true, true);
+                // Arrival includes where to point the camera: clock hour to the
+                // aim point plus elevation, for finding small objects up close.
+                Vector3 aimPoint = HotspotHandler.GetAimPoint(_guidanceTarget);
+                Vector3 playerPosition = SpatialUtil.PlayerPosition();
+                int aimHour = SpatialUtil.ClockHour(playerPosition, SpatialUtil.PlayerForward(), aimPoint);
+                string arrival = Loc.Get("nav_arrived", HotspotHandler.GetHotspotName(_guidanceTarget))
+                    + " " + Loc.Get("nav_aim", aimHour);
+                string elevation = SpatialUtil.DescribeElevation(aimPoint);
+                if (elevation.Length > 0)
+                    arrival += ", " + elevation;
+
+                ScreenReader.Say(arrival + ".", true, true, true);
                 StopGuidance(announce: false);
                 return;
             }
