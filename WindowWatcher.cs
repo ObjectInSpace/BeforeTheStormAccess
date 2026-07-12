@@ -19,9 +19,12 @@ namespace BeforeTheStormAccess
     {
         private const float PollInterval = 0.4f;
         private const int MaxLabelsPerAnnouncement = 14;
-        private const int FlapChangeLimit = 4;
+        // The flap guard exists for self-animating labels (timers, tickers), not
+        // deliberate page flipping: 6 changes in 10s before muting, and a short
+        // 4s mute so a page the user actually wants re-reads almost immediately.
+        private const int FlapChangeLimit = 6;
         private const float FlapWindowSeconds = 10f;
-        private const float FlapMuteSeconds = 15f;
+        private const float FlapMuteSeconds = 4f;
 
         // Windows covered by dedicated logic or intentionally silent.
         private static readonly string[] _excludedWindows =
