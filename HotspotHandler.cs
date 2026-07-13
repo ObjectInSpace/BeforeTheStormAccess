@@ -24,6 +24,7 @@ namespace BeforeTheStormAccess
 
         private float _nextPollTime;
         private T_6FD30C1C _lastInteractHotspot;
+        private bool _lastWasInteractable;
         private T_6FD30C1C _browserTarget;
         private int _interactHintsRemaining = -1;
 
@@ -69,16 +70,24 @@ namespace BeforeTheStormAccess
         }
 
         /// <summary>
-        /// Announces verb options when the interact UI acquires or switches hotspots.
+        /// Two-stage interaction announcements. The interact UI acquires a hotspot
+        /// on TRIGGER VOLUME entry, but the game only allows interaction within the
+        /// hotspot's interact distance measured in full 3D from the character (and
+        /// camera) to the aim point — a large trigger reached from above/below is
+        /// "nearby", not usable. Mirror that gate: name-only "nearby" on
+        /// acquisition, full verbs + hint only when genuinely interactable.
         /// </summary>
         private void PollInteractUI()
         {
             T_6FD30C1C current = GetInteractHotspot();
-            if (current == _lastInteractHotspot)
+            bool interactable = current != null && IsWithinInteractDistance(current);
+
+            if (current == _lastInteractHotspot && interactable == _lastWasInteractable)
                 return;
 
             bool hadHotspot = _lastInteractHotspot != null;
             _lastInteractHotspot = current;
+            _lastWasInteractable = interactable;
 
             if (current == null)
             {
@@ -86,6 +95,14 @@ namespace BeforeTheStormAccess
                 {
                     ScreenReader.SayCoalesced(Loc.Get("out_of_range"), true, false);
                 }
+                return;
+            }
+
+            if (!interactable)
+            {
+                // Trigger entered but not in true reach yet (often a verticality
+                // gap: right above/below, or still walking in).
+                ScreenReader.SayCoalesced(Loc.Get("hotspot_nearby", GetHotspotName(current)), true, true);
                 return;
             }
 
@@ -103,6 +120,27 @@ namespace BeforeTheStormAccess
 
             DebugLogger.Log(LogCategory.Handler, "Hotspot", "in range: " + announcement);
             ScreenReader.SayCoalesced(announcement, true, true);
+        }
+
+        /// <summary>
+        /// The game's own interactability gate (FreeRoamWindow interact UI scaling):
+        /// full 3D distance from the main character — or the camera — to the aim
+        /// point must be under the hotspot's interact distance.
+        /// </summary>
+        private static bool IsWithinInteractDistance(T_6FD30C1C hotspot)
+        {
+            Vector3 aimPoint = GetAimPoint(hotspot);
+            float maxDistance = hotspot.m_interactDistanceOverride;
+
+            T_A6E913D1 gm = GameRefs.GameManager;
+            if (gm != null && gm.m_mainCharacter != null
+                && Vector3.Distance(aimPoint, gm.m_mainCharacter.transform.position) < maxDistance)
+            {
+                return true;
+            }
+
+            Camera camera = Camera.main;
+            return camera != null && Vector3.Distance(aimPoint, camera.transform.position) < maxDistance;
         }
 
         /// <summary>Speech name of the first key bound to the interact action.</summary>

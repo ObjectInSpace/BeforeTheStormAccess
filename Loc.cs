@@ -236,6 +236,7 @@ namespace BeforeTheStormAccess
             Add("diagnostics_dumped", "Diagnostics written to log.");
 
             Add("out_of_range", "out of range");
+            Add("hotspot_nearby", "{0} nearby.");
             Add("interact_hint", "Hold {0}, then press the action's direction key.");
             Add("key_unknown", "the interact key");
             Add("no_hotspots", "No interactive objects found nearby.");
