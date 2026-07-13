@@ -1,6 +1,28 @@
 # Before the Storm Access - Project Status
 
-Last updated: 2026-07-11
+Last updated: 2026-07-13
+
+## Recent versions (v0.10.1 - v0.11.1, from user playtesting)
+
+- v0.10.1: journal pages re-read when the user returns to them (label VISIBILITY
+  tracking, not just text changes; page text batched into one announcement in
+  reading order). User report: "only reads each journal page once."
+- v0.10.2: flap guard softened (6 changes/10s trips it, 4s mute — was 4/10s, 15s).
+  User report: "fifteen seconds seems pretty long."
+- v0.11.0: elevation for camera aiming — browser/backslash announcements append
+  "slightly up/down" (10-30 deg) or "up high"/"down low" (>30 deg), measured
+  camera-to-aim-point (hotspot m_pointAt when authored); guidance arrival speaks
+  "Aim at {clock} o'clock, {elevation}". User report: clock directions lacked
+  verticality for small objects (photos, phones).
+- v0.11.1: interact announcement gated on the game's true reach check — trigger
+  volume entry says "{name} nearby.", full verbs + hint only when the 3D distance
+  from the main character (T_A6E913D1.m_mainCharacter) or camera to the aim point
+  is under m_interactDistanceOverride (mirrors FreeRoamWindow's interact UI
+  scaling gate). User report: announced interactable when merely in the vicinity
+  (trigger volumes extend vertically).
+- Git repo initialized at project root (decompiled/ excluded — copyrighted);
+  release zip: dist\BeforeTheStormAccess-v0.10.0.zip (rebuild via
+  scripts\Package-Mod.ps1 for newer versions).
 
 ## Current phase
 
