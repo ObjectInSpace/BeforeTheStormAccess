@@ -9,7 +9,7 @@ namespace BeforeTheStormAccess
     {
         internal const string Guid = "com.amock.beforethestormaccess";
         internal const string Name = "Before the Storm Access";
-        internal const string Version = "0.11.1";
+        internal const string Version = "0.12.0";
     }
 
     /// <summary>

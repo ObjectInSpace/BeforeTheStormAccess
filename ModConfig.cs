@@ -15,6 +15,7 @@ namespace BeforeTheStormAccess
         public static ConfigEntry<int> InteractHintCount { get; private set; }
         public static ConfigEntry<float> GuidanceProgressSeconds { get; private set; }
         public static ConfigEntry<bool> AnnounceObjectiveChanges { get; private set; }
+        public static ConfigEntry<bool> SpeakDialogue { get; private set; }
 
         /// <summary>Binds all settings. Call once from plugin Awake.</summary>
         public static void Initialize(ConfigFile config)
@@ -30,6 +31,9 @@ namespace BeforeTheStormAccess
                 "reaching an object. 0 disables the hint.");
             AnnounceObjectiveChanges = config.Bind("Verbosity", "AnnounceObjectiveChanges", true,
                 "Announce new objectives automatically as the story sets them.");
+            SpeakDialogue = config.Bind("Verbosity", "SpeakDialogue", true,
+                "Read dialogue lines and subtitles automatically. Toggle in game with " +
+                "Shift+grave (tilde). Useful when the voice acting alone is preferred.");
             GuidanceProgressSeconds = config.Bind("Navigation", "GuidanceProgressSeconds", 3.5f,
                 "Seconds between spoken progress distances while continuous guidance runs " +
                 "on a steady course. Course changes always speak immediately.");

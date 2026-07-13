@@ -47,7 +47,12 @@ namespace BeforeTheStormAccess
                 if (cleaned.Length == 0)
                     return;
 
+                // Track the line even when muted so the poll fallback stays quiet
+                // too and the repeat key still has the latest dialogue.
                 _lastSpokenNormalized = Normalize(cleaned);
+                if (!ModConfig.SpeakDialogue.Value)
+                    return;
+
                 DebugLogger.Log(LogCategory.Handler, "Subtitle", "line: " + cleaned);
                 ScreenReader.Say(cleaned, true, true, true);
             }
@@ -67,6 +72,8 @@ namespace BeforeTheStormAccess
                 return;
 
             _lastSpokenNormalized = Normalize(cleaned);
+            if (!ModConfig.SpeakDialogue.Value)
+                return;
             DebugLogger.Log(LogCategory.Handler, "Subtitle", "override: " + cleaned);
             ScreenReader.Say(cleaned, true, true, true);
         }

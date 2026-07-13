@@ -108,6 +108,17 @@ namespace BeforeTheStormAccess
 
             if (Input.GetKeyDown(KeyCode.BackQuote))
             {
+                bool shiftHeld = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+                if (shiftHeld)
+                {
+                    // Tilde: toggle automatic dialogue reading (persisted setting).
+                    ModConfig.SpeakDialogue.Value = !ModConfig.SpeakDialogue.Value;
+                    ScreenReader.Say(Loc.Get(ModConfig.SpeakDialogue.Value
+                        ? "dialogue_reading_on"
+                        : "dialogue_reading_off"));
+                    return;
+                }
+
                 if (!ScreenReader.RepeatLastSpoken())
                 {
                     ScreenReader.Say(Loc.Get("nothing_to_repeat"), true, false);
@@ -122,6 +133,9 @@ namespace BeforeTheStormAccess
         /// </summary>
         private void AnnounceSubtitleChanges()
         {
+            if (!ModConfig.SpeakDialogue.Value)
+                return;
+
             T_2F0DA2D9 subtitleWindow = GameRefs.SubtitleWindow;
             if (subtitleWindow == null || !subtitleWindow.gameObject.activeInHierarchy)
             {

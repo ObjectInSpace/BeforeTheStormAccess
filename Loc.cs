@@ -200,6 +200,7 @@ namespace BeforeTheStormAccess
                 "Before the Storm Access keys. " +
                 "F1: this help. " +
                 "Grave accent: repeat last announcement. " +
+                "Shift grave, the tilde: toggle automatic dialogue reading on or off. " +
                 "F9: toggle debug logging. " +
                 "F10: write a diagnostic snapshot to the log file. " +
                 "Right bracket: next interactive object, nearest first. " +
@@ -221,6 +222,8 @@ namespace BeforeTheStormAccess
             Add("debug_mode_enabled", "Debug mode enabled.");
             Add("debug_mode_disabled", "Debug mode disabled.");
             Add("nothing_to_repeat", "Nothing to repeat.");
+            Add("dialogue_reading_on", "Dialogue reading on.");
+            Add("dialogue_reading_off", "Dialogue reading off.");
 
             // Choice directions (match eInteractMenu order: up, right, down, left).
             Add("dir_up", "up");
