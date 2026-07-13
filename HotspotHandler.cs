@@ -123,24 +123,115 @@ namespace BeforeTheStormAccess
         }
 
         /// <summary>
-        /// The game's own interactability gate (FreeRoamWindow interact UI scaling):
-        /// full 3D distance from the main character — or the camera — to the aim
-        /// point must be under the hotspot's interact distance.
+        /// The game's own "the interact prompt is actionable right now" test, not an
+        /// approximation. The interact UI's CheckOnScreen (T_572A4969) is what gates
+        /// whether pressing interact does anything: it activates the choice UI only
+        /// when the hotspot's aim point is in front of the main camera AND projects
+        /// to a point inside the viewport. When that fails the choice UI is switched
+        /// off and interact is a no-op — which is exactly the "announced interactable
+        /// but nothing happened until I aimed the camera" report. So the mod reads
+        /// the same signal the game reads: m_interactUI.m_choiceUI.gameObject.activeSelf.
+        ///
+        /// Distance and angle-interact are still validated first (a hotspot must be in
+        /// reach at all), but the on-screen check is the decisive gate.
         /// </summary>
         private static bool IsWithinInteractDistance(T_6FD30C1C hotspot)
         {
             Vector3 aimPoint = GetAimPoint(hotspot);
             float maxDistance = hotspot.m_interactDistanceOverride;
 
+            Transform camera = GameRefs.FollowCameraTransform;
+            bool distanceOk = camera != null
+                && Vector3.Distance(aimPoint, camera.position) < maxDistance;
+
             T_A6E913D1 gm = GameRefs.GameManager;
-            if (gm != null && gm.m_mainCharacter != null
-                && Vector3.Distance(aimPoint, gm.m_mainCharacter.transform.position) < maxDistance)
+            if (!distanceOk && gm != null && gm.m_mainCharacter != null)
             {
-                return true;
+                distanceOk = Vector3.Distance(aimPoint, gm.m_mainCharacter.transform.position) < maxDistance;
             }
 
-            Camera camera = Camera.main;
-            return camera != null && Vector3.Distance(aimPoint, camera.transform.position) < maxDistance;
+            if (!distanceOk)
+                return false;
+
+            if (!IsWithinInteractAngle(hotspot, camera))
+                return false;
+
+            return IsInteractPromptOnScreen(hotspot);
+        }
+
+        /// <summary>
+        /// Mirrors the game's CheckOnScreen (T_572A4969.cs:234): the interact prompt
+        /// is actionable only when the aim point is in front of the main camera
+        /// (angle &lt; 90) and its projection lands inside the viewport [0,1]. This is
+        /// the query the game itself runs each frame to enable/disable the choice UI.
+        /// Returns true when the camera is unreadable, to avoid over-suppressing.
+        /// </summary>
+        private static bool IsInteractPromptOnScreen(T_6FD30C1C hotspot)
+        {
+            // The game's CheckOnScreen uses T_34182F31.main, which is Camera.main
+            // (with a cached fallback only when Camera.main is momentarily null).
+            Camera main = Camera.main;
+            if (main == null)
+                return true;
+
+            Vector3 aimPoint = GetAimPoint(hotspot);
+            Vector3 toAim = aimPoint - main.transform.position;
+            if (Vector3.Angle(main.transform.forward, toAim) >= 90f)
+                return false;
+
+            Vector3 viewport = main.ScreenToViewportPoint(main.WorldToScreenPoint(aimPoint));
+            return viewport.x > 0f && viewport.y > 0f && viewport.x < 1f && viewport.y < 1f;
+        }
+
+        /// <summary>
+        /// Angle in degrees between the main camera's forward and the direction to
+        /// the hotspot's aim point (0 = dead centre), for the F10 diagnostic dump.
+        /// Returns 180 when the camera is unknown.
+        /// </summary>
+        private static float CameraFacingAngle(T_6FD30C1C hotspot)
+        {
+            Camera main = Camera.main;
+            if (main == null)
+                return 180f;
+
+            Vector3 toAim = GetAimPoint(hotspot) - main.transform.position;
+            if (toAim.sqrMagnitude < 0.0001f)
+                return 0f;
+
+            return Vector3.Angle(toAim, main.transform.forward);
+        }
+
+        /// <summary>Distance from the follow camera to the hotspot's aim point, or -1.</summary>
+        private static float CameraToAimDistance(T_6FD30C1C hotspot)
+        {
+            Transform camera = GameRefs.FollowCameraTransform;
+            if (camera == null)
+                return -1f;
+
+            return Vector3.Distance(GetAimPoint(hotspot), camera.position);
+        }
+
+        /// <summary>
+        /// Mirrors the game's angle-interact gate (T_F8FE3E1C lines 338-349): the
+        /// horizontal angle of the camera-to-aim-point direction, measured against
+        /// world forward, must fall inside the hotspot's [left, right] interact arc.
+        /// Non-angle hotspots always pass (GetAngleInteractValid returns true).
+        /// </summary>
+        private static bool IsWithinInteractAngle(T_6FD30C1C hotspot, Transform camera)
+        {
+            if (!hotspot.usesAngleInteract)
+                return true;
+
+            if (camera == null)
+                return true; // No camera to measure from; don't over-suppress.
+
+            Vector3 toAim = GetAimPoint(hotspot) - camera.position;
+            toAim.y = 0f;
+            float angle = Vector3.Angle(-toAim, Vector3.forward);
+            if (Vector3.Cross(toAim, Vector3.forward).y < 0f)
+                angle *= -1f;
+
+            return hotspot.GetAngleInteractValid(angle);
         }
 
         /// <summary>Speech name of the first key bound to the interact action.</summary>
@@ -352,16 +443,18 @@ namespace BeforeTheStormAccess
         }
 
         /// <summary>
-        /// "{distance} meters at {clock} o'clock[, slightly up]" from the player.
-        /// Elevation is measured camera-to-aim-point (the hotspot's m_pointAt when
-        /// authored) so it directly answers "where do I point the camera".
+        /// "{distance} meters at {clock} o'clock[, slightly up]" to the aim point.
+        /// Distance is player-to-aim-point (how far to walk); the clock hour and
+        /// elevation are measured from the CAMERA, because turning to face an object
+        /// moves the camera and interactability is gated on camera aim — so both
+        /// answer "where do I point the camera".
         /// </summary>
         private static string DescribeRelativePosition(T_6FD30C1C hotspot)
         {
-            Vector3 origin = SpatialUtil.PlayerPosition();
             Vector3 aimPoint = GetAimPoint(hotspot);
-            float distance = (aimPoint - origin).magnitude;
-            int hour = SpatialUtil.ClockHour(origin, SpatialUtil.PlayerForward(), aimPoint);
+            float distance = (aimPoint - SpatialUtil.PlayerPosition()).magnitude;
+            int hour = SpatialUtil.ClockHour(
+                SpatialUtil.CameraPosition(), SpatialUtil.CameraForward(), aimPoint);
             string text = Loc.Get("distance_clock", SpatialUtil.FormatDistance(distance), hour);
 
             string elevation = SpatialUtil.DescribeElevation(aimPoint);
@@ -408,6 +501,8 @@ namespace BeforeTheStormAccess
                 Main.Log.LogInfo("interact UI hotspot='" + GetHotspotName(interactTarget)
                     + "' obj=" + interactTarget.gameObject.name
                     + " playerDistance=" + (interactTarget.transform.position - origin).magnitude.ToString("0.00")
+                    + " camDist=" + CameraToAimDistance(interactTarget).ToString("0.00")
+                    + " camFacingAngle=" + CameraFacingAngle(interactTarget).ToString("0.0")
                     + " interactDistanceOverride=" + interactTarget.m_interactDistanceOverride
                     + " usesAngleInteract=" + interactTarget.usesAngleInteract
                     + " leftAngle=" + interactTarget.m_LeftInteractAngle
@@ -425,6 +520,8 @@ namespace BeforeTheStormAccess
                 T_6FD30C1C h = browseable[i];
                 Main.Log.LogInfo("  " + (i + 1) + ". '" + GetHotspotName(h) + "' obj=" + h.gameObject.name
                     + " dist=" + (h.transform.position - player).magnitude.ToString("0.0")
+                    + " camDist=" + CameraToAimDistance(h).ToString("0.00")
+                    + " camFacingAngle=" + CameraFacingAngle(h).ToString("0.0")
                     + " verbs(a/n/l)=" + CountActive(h.m_activeVerbs)
                     + "/" + CountActive(h.m_nonInteractVerbs)
                     + "/" + CountActive(h.m_localTriggerVerbs));

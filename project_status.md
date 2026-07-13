@@ -20,6 +20,56 @@ Last updated: 2026-07-13
   is under m_interactDistanceOverride (mirrors FreeRoamWindow's interact UI
   scaling gate). User report: announced interactable when merely in the vicinity
   (trigger volumes extend vertically).
+- v0.11.2: interact gate now also mirrors the game's ANGLE-interact test. Distance
+  alone was insufficient — angle-gated hotspots (usesAngleInteract, i.e.
+  m_LeftInteractAngle != m_RightInteractAngle) still announced the full verbs +
+  interact hint while the player stood off-angle and the game refused to interact.
+  IsWithinInteractDistance now measures distance from the follow camera (with
+  character fallback) AND, for angle hotspots, computes the horizontal approach
+  angle vs Vector3.forward and calls hotspot.GetAngleInteractValid — the exact
+  block from T_F8FE3E1C lines 336-349. Resolves the long-standing "in range but
+  interact did nothing" report (v0.5.0 ISSUE 2). GameRefs.FollowCameraTransform
+  added so the mod measures from the same origin the game uses.
+- v0.11.2 (cont.): navigation now paths to the hotspot's AIM POINT
+  (HotspotHandler.GetAimPoint / m_pointAt), not its root transform. The game judges
+  interactability from the aim point, so routing to transform.position could land
+  the player at the pathing goal yet outside the interact gate (a second cause of
+  "arrived but can't interact," independent of the angle fix). ComputePath's
+  existing SamplePosition snap pulls an off-mesh aim point onto the nearest walkable
+  cell. Navigation, the game gate, and the mod gate now all target the same point;
+  the arrival announcement (already aim-point based) matches where guidance steers.
+- v0.13.1: THE decisive interact gate — the game's own on-screen check, queried
+  not guessed (NOTE: earlier entries in this list mislabel these as "v0.11.x"; the
+  plugin was already at 0.13.0). User report: standing between two objects (Poster
+  + Costume Rack, both usesAngleInteract=False), sweeping the CAMERA, both announced
+  interactable but pressing interact did nothing for either until the camera found
+  the right angle. Root cause found in T_572A4969.CheckOnScreen (the interact UI's
+  own per-frame test): the choice UI — and thus a working interact — is enabled only
+  when the aim point is in front of the main camera (angle < 90) AND its viewport
+  projection is inside [0,1]. Distance/angle-interact don't capture camera aim.
+  HotspotHandler.IsInteractPromptOnScreen now mirrors CheckOnScreen exactly
+  (Camera.main = the game's T_34182F31.main), gating announcements on it. Earlier
+  angle-interact + follow-camera-distance work retained as a pre-filter; the
+  on-screen check is the decider. F10 dump now logs camDist + camFacingAngle per
+  hotspot. (An interim 35-degree InteractFacingAngle config guess was written then
+  removed once CheckOnScreen was found — no threshold needed.)
+- v0.13.1 (cont.): CAMERA-BASIS CONSISTENCY. Confirmed from decompile
+  (T_C3DD66D9.CalculateAngle) that movement is camera-relative — walk direction =
+  input offset by Camera.transform.localEulerAngles.y; the body rotates toward that
+  with lag. So every "which way to aim/turn" readout now measures from the camera,
+  not the character body (which diverges while standing/strafing/after a swing):
+    * Nav walking legs (AnnounceRoute first leg + live GuidanceTick steer) → camera
+      forward via new SpatialUtil.CameraForward(). Later legs stay geometric
+      (direction just walked). USER-APPROVED behavioral change.
+    * Arrival aim hour → camera position + forward (was body). Elevation already was.
+    * Hotspot browser DescribeRelativePosition clock hour → camera (distance stays
+      player-to-object).
+  Nav arrival threshold: ArrivalDistanceFor(target) = m_interactDistanceOverride
+  floored at 1.5m (was fixed 2.0m), so "Arrived" matches each object's own interact
+  radius. Nav still PATHS to the aim point (unchanged) — pathing answers "where to
+  stand", which is distinct from and can't satisfy the camera-aim gate; the arrival
+  line then tells you where to point the camera. All three — interact gate, arrival
+  aim, browser direction — now reference the same camera.
 - Git repo initialized at project root (decompiled/ excluded — copyrighted);
   release zip: dist\BeforeTheStormAccess-v0.10.0.zip (rebuild via
   scripts\Package-Mod.ps1 for newer versions).

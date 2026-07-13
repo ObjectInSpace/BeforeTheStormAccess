@@ -20,7 +20,7 @@ namespace BeforeTheStormAccess
         private const float SampleRadius = 4f;
         private const int MaxSpokenLegs = 6;
         private const float GuidanceInterval = 0.4f;
-        private const float ArriveDistance = 2.0f;
+        private const float MinArriveDistance = 1.5f;
         private const float MinLegLength = 0.4f;
 
         private readonly HotspotHandler _hotspots;
@@ -123,13 +123,15 @@ namespace BeforeTheStormAccess
                 return;
             }
 
-            if (total <= ArriveDistance)
+            if (total <= ArrivalDistanceFor(_guidanceTarget))
             {
-                // Arrival includes where to point the camera: clock hour to the
-                // aim point plus elevation, for finding small objects up close.
+                // Arrival includes where to point the camera: clock hour and
+                // elevation to the aim point. Both are measured from the CAMERA
+                // (position + forward), because interactability is gated on the
+                // camera projecting the aim point on-screen, not on body facing.
                 Vector3 aimPoint = HotspotHandler.GetAimPoint(_guidanceTarget);
-                Vector3 playerPosition = SpatialUtil.PlayerPosition();
-                int aimHour = SpatialUtil.ClockHour(playerPosition, SpatialUtil.PlayerForward(), aimPoint);
+                int aimHour = SpatialUtil.ClockHour(
+                    SpatialUtil.CameraPosition(), SpatialUtil.CameraForward(), aimPoint);
                 string arrival = Loc.Get("nav_arrived", HotspotHandler.GetHotspotName(_guidanceTarget))
                     + " " + Loc.Get("nav_aim", aimHour);
                 string elevation = SpatialUtil.DescribeElevation(aimPoint);
@@ -143,7 +145,10 @@ namespace BeforeTheStormAccess
 
             Vector3 playerPos = SpatialUtil.PlayerPosition();
             Vector3 steer = FirstMeaningfulCorner(path, playerPos);
-            int hour = SpatialUtil.ClockHour(playerPos, SpatialUtil.PlayerForward(), steer);
+            // Steer relative to the CAMERA: movement is camera-relative, so a clock
+            // hour the player can act on must be measured against camera forward, not
+            // the body (which lags and can face elsewhere while standing/strafing).
+            int hour = SpatialUtil.ClockHour(playerPos, SpatialUtil.CameraForward(), steer);
 
             if (hour != _lastSpokenHour)
             {
@@ -158,6 +163,19 @@ namespace BeforeTheStormAccess
                 // Progress tick appends (no interrupt) so it never cuts off dialogue.
                 ScreenReader.Say(Loc.Get("nav_tick_dist", SpatialUtil.FormatDistance(total)), false, false);
             }
+        }
+
+        /// <summary>
+        /// How close (path length to the aim point) counts as "arrived" for this
+        /// target: the hotspot's own m_interactDistanceOverride — the same radius the
+        /// interact gate uses — floored at MinArriveDistance so guidance never demands
+        /// standing implausibly on top of the object. Fixed 2.0m before, which under-
+        /// or over-shot objects whose interact distance differed.
+        /// </summary>
+        private static float ArrivalDistanceFor(T_6FD30C1C target)
+        {
+            float interactDistance = target.m_interactDistanceOverride;
+            return interactDistance > MinArriveDistance ? interactDistance : MinArriveDistance;
         }
 
         /// <summary>The first path corner far enough away to steer toward.</summary>
@@ -176,13 +194,20 @@ namespace BeforeTheStormAccess
         /// <summary>
         /// NavMesh path from the player to the hotspot, with both ends snapped to
         /// the mesh. Returns null (total 0) when no usable path exists.
+        ///
+        /// Routes to the hotspot's AIM POINT (m_pointAt), not its root transform:
+        /// the game judges interactability from the aim point, so pathing there is
+        /// what actually lands the player inside the interact gate. Aim points are
+        /// often authored offset from the pivot (and can float off the mesh); the
+        /// SamplePosition snap below pulls the goal onto the nearest walkable cell,
+        /// which is exactly the "where to stand to interact" spot.
         /// </summary>
         private static NavMeshPath ComputePath(T_6FD30C1C target, out float total)
         {
             total = 0f;
 
             Vector3 from = SpatialUtil.PlayerPosition();
-            Vector3 to = target.transform.position;
+            Vector3 to = HotspotHandler.GetAimPoint(target);
 
             NavMeshHit hit;
             if (NavMesh.SamplePosition(from, out hit, SampleRadius, NavMesh.AllAreas))
@@ -233,9 +258,10 @@ namespace BeforeTheStormAccess
                 builder.Append(" ").Append(Loc.Get("nav_partial"));
             }
 
-            // First leg is relative to the player's current facing; later legs are
-            // relative to the direction just walked, matching how a person turns.
-            Vector3 heading = SpatialUtil.PlayerForward();
+            // First leg is relative to the CAMERA's current facing (movement is
+            // camera-relative, so that's the frame the player steers in); later legs
+            // are relative to the direction just walked, matching how a person turns.
+            Vector3 heading = SpatialUtil.CameraForward();
             int spokenLegs = 0;
             for (int i = 1; i < corners.Length && spokenLegs < MaxSpokenLegs; i++)
             {

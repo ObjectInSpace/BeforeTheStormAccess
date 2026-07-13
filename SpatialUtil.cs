@@ -67,6 +67,22 @@ namespace BeforeTheStormAccess
         }
 
         /// <summary>
+        /// Camera forward for AIM-related direction math; player facing as fallback.
+        /// Interactability is gated on the camera (T_572A4969.CheckOnScreen projects
+        /// the aim point through the main camera), so "which way to aim" must be
+        /// measured against the camera, not the character body — the two can point
+        /// different ways. Use PlayerForward() for WALKING directions instead.
+        /// </summary>
+        public static Vector3 CameraForward()
+        {
+            Camera camera = Camera.main;
+            if (camera != null)
+                return camera.transform.forward;
+
+            return PlayerForward();
+        }
+
+        /// <summary>
         /// Speech fragment for the vertical angle from the camera to a target:
         /// empty when roughly level (within 10 degrees), "slightly up/down" to 30
         /// degrees, "up high"/"down low" beyond. Tells the user where to point the

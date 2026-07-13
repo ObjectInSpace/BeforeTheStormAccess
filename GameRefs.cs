@@ -118,5 +118,21 @@ namespace BeforeTheStormAccess
 
         /// <summary>The free roam HUD window, or null.</summary>
         public static T_F8FE3E1C FreeRoamWindow => GetWindow<T_F8FE3E1C>("FreeRoamWindow");
+
+        /// <summary>
+        /// The follow camera's transform, or null. This is the origin the game uses
+        /// for its own interactability tests (distance and angle-interact), so the
+        /// mod must measure from the same point to match the game's reach gate.
+        /// </summary>
+        public static UnityEngine.Transform FollowCameraTransform
+        {
+            get
+            {
+                T_A6E913D1 gm = GameManager;
+                if (gm != null && gm.m_followCamera != null)
+                    return gm.m_followCamera.gameObject.transform;
+                return null;
+            }
+        }
     }
 }
