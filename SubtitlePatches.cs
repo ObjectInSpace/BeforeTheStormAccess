@@ -54,7 +54,11 @@ namespace BeforeTheStormAccess
                     return;
 
                 DebugLogger.Log(LogCategory.Handler, "Subtitle", "line: " + cleaned);
-                ScreenReader.Say(cleaned, true, true, true);
+                // A line arriving while a choice is on screen must not cut the
+                // choice announcement off (the race that made choices unreviewable)
+                // — it queues behind instead.
+                bool interrupt = !AccessibilityWatcher.IsChoiceActive();
+                ScreenReader.Say(cleaned, interrupt, true, true);
             }
             catch (Exception ex)
             {

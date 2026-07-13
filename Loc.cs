@@ -199,7 +199,8 @@ namespace BeforeTheStormAccess
             Add("help_text",
                 "Before the Storm Access keys. " +
                 "F1: this help. " +
-                "Grave accent: repeat last announcement. " +
+                "Grave accent: repeat last announcement, or read the current choices " +
+                "whenever a choice is on screen. " +
                 "Shift grave, the tilde: toggle automatic dialogue reading on or off. " +
                 "F9: toggle debug logging. " +
                 "F10: write a diagnostic snapshot to the log file. " +

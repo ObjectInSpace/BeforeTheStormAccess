@@ -119,6 +119,16 @@ namespace BeforeTheStormAccess
                     return;
                 }
 
+                // An active choice outranks the last spoken line: choosing is
+                // direction-triggered with no review step, so the repeat key must
+                // always be able to read the live options.
+                string choiceText = BuildCurrentChoiceText();
+                if (choiceText.Length > 0)
+                {
+                    ScreenReader.Say(choiceText, true, true, true);
+                    return;
+                }
+
                 if (!ScreenReader.RepeatLastSpoken())
                 {
                     ScreenReader.Say(Loc.Get("nothing_to_repeat"), true, false);
@@ -162,46 +172,80 @@ namespace BeforeTheStormAccess
             }
 
             DebugLogger.Log(LogCategory.Handler, "SubtitlePoll", "fallback speak: " + text);
-            ScreenReader.SayCoalesced(text, true, true);
+            if (IsChoiceActive())
+            {
+                // Never cut an announced choice off with a late subtitle.
+                ScreenReader.Say(text, false, true, true);
+            }
+            else
+            {
+                ScreenReader.SayCoalesced(text, true, true);
+            }
         }
 
-        private void AnnounceChoiceChanges()
+        /// <summary>
+        /// The live choice radial (conversation or backtalk), or null. Regular and
+        /// backtalk choices use the same 4-way component; whichever is active in
+        /// the hierarchy is live. Also used by the dialogue patches to avoid
+        /// interrupting an announced choice with a late-arriving line.
+        /// </summary>
+        internal static T_6876113C GetActiveChoiceUI(out bool isBacktalk)
         {
+            isBacktalk = false;
+
             T_A35DE5E1 dialogWindow = GameRefs.DialogWindow;
             if (dialogWindow == null || !dialogWindow.gameObject.activeInHierarchy)
-            {
-                ResetChoiceState();
-                return;
-            }
-
-            // Regular conversation choices and backtalk choices use the same 4-way
-            // radial component; whichever is active in the hierarchy is live.
-            T_6876113C activeChoiceUI = null;
-            bool isBacktalk = false;
+                return null;
 
             if (dialogWindow.m_choiceUI != null && dialogWindow.m_choiceUI.gameObject.activeInHierarchy)
+                return dialogWindow.m_choiceUI;
+
+            if (dialogWindow.m_btChoiceUI != null && dialogWindow.m_btChoiceUI.gameObject.activeInHierarchy)
             {
-                activeChoiceUI = dialogWindow.m_choiceUI;
-            }
-            else if (dialogWindow.m_btChoiceUI != null && dialogWindow.m_btChoiceUI.gameObject.activeInHierarchy)
-            {
-                activeChoiceUI = dialogWindow.m_btChoiceUI;
                 isBacktalk = true;
+                return dialogWindow.m_btChoiceUI;
             }
 
-            if (activeChoiceUI == null || activeChoiceUI.m_choices == null)
-            {
-                ResetChoiceState();
-                return;
-            }
+            return null;
+        }
 
+        /// <summary>True when a dialogue/backtalk choice is currently on screen.</summary>
+        public static bool IsChoiceActive()
+        {
+            bool isBacktalk;
+            T_6876113C choiceUI = GetActiveChoiceUI(out isBacktalk);
+            return choiceUI != null && choiceUI.m_choices != null;
+        }
+
+        /// <summary>
+        /// Full spoken form of the live choice set ("Choices: up: X. right: Y."),
+        /// or empty when no choice is active.
+        /// </summary>
+        public static string BuildCurrentChoiceText()
+        {
+            bool isBacktalk;
+            T_6876113C choiceUI = GetActiveChoiceUI(out isBacktalk);
+            if (choiceUI == null || choiceUI.m_choices == null)
+                return string.Empty;
+
+            int selectedIndex;
+            string signature;
+            string body = BuildChoiceBody(choiceUI, out signature, out selectedIndex);
+            if (body.Length == 0)
+                return string.Empty;
+
+            return Loc.Get(isBacktalk ? "backtalk_prefix" : "choices_prefix") + " " + body;
+        }
+
+        private static string BuildChoiceBody(T_6876113C choiceUI, out string signature, out int selectedIndex)
+        {
             StringBuilder signatureBuilder = new StringBuilder();
             StringBuilder announceBuilder = new StringBuilder();
-            int selectedIndex = -1;
+            selectedIndex = -1;
 
-            for (int i = 0; i < activeChoiceUI.m_choices.Length; i++)
+            for (int i = 0; i < choiceUI.m_choices.Length; i++)
             {
-                T_B611E532 choice = activeChoiceUI.m_choices[i];
+                T_B611E532 choice = choiceUI.m_choices[i];
                 if (choice == null || !choice.gameObject.activeInHierarchy || !choice.enabled)
                     continue;
 
@@ -219,16 +263,35 @@ namespace BeforeTheStormAccess
                     selectedIndex = i;
             }
 
-            string signature = signatureBuilder.ToString();
+            signature = signatureBuilder.ToString();
+            return announceBuilder.ToString();
+        }
+
+        private void AnnounceChoiceChanges()
+        {
+            bool isBacktalk;
+            T_6876113C activeChoiceUI = GetActiveChoiceUI(out isBacktalk);
+            if (activeChoiceUI == null || activeChoiceUI.m_choices == null)
+            {
+                ResetChoiceState();
+                return;
+            }
+
+            int selectedIndex;
+            string signature;
+            string body = BuildChoiceBody(activeChoiceUI, out signature, out selectedIndex);
+
             if (signature != _lastChoiceSignature)
             {
                 _lastChoiceSignature = signature;
                 _lastSelectedChoice = selectedIndex;
 
-                if (announceBuilder.Length > 0)
+                if (body.Length > 0)
                 {
                     string prefix = Loc.Get(isBacktalk ? "backtalk_prefix" : "choices_prefix");
-                    ScreenReader.SayCoalesced(prefix + " " + announceBuilder, true, true);
+                    // Full-strength Say (not coalesced): choices are the highest
+                    // stakes announcement — direction keys commit instantly.
+                    ScreenReader.Say(prefix + " " + body, true, true, true);
                 }
                 return;
             }
