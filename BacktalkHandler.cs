@@ -95,9 +95,13 @@ namespace BeforeTheStormAccess
                     if (backtalk == null || !backtalk.InBacktalk || _163886DF5 <= 0)
                         return;
 
+                    // A live choice holds the speech floor: score feedback must
+                    // queue behind the option read, never cut it off. (bt_won ends
+                    // the round, so the choice UI is normally already gone there.)
+                    bool choiceActive = AccessibilityWatcher.IsChoiceActive();
                     if (_163886DF5 >= backtalk.RequiredPoints)
                     {
-                        ScreenReader.Say(Loc.Get("bt_won"), true, true, true);
+                        ScreenReader.Say(Loc.Get("bt_won"), !choiceActive, true, true);
                     }
                     else
                     {
@@ -127,9 +131,11 @@ namespace BeforeTheStormAccess
                         return;
 
                     int allowed = backtalk.PointsPossible - backtalk.RequiredPoints + 1;
+                    // As with points won: never interrupt a live choice read.
+                    bool choiceActive = AccessibilityWatcher.IsChoiceActive();
                     if (_1B4719EFE >= allowed)
                     {
-                        ScreenReader.Say(Loc.Get("bt_lost"), true, true, true);
+                        ScreenReader.Say(Loc.Get("bt_lost"), !choiceActive, true, true);
                     }
                     else
                     {

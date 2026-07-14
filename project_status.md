@@ -2,6 +2,40 @@
 
 Last updated: 2026-07-14
 
+## v0.5.0 — Choices hold the speech floor (DEPLOYED, PENDING IN-GAME TEST)
+
+User report: backtalk challenge / choice text was being pre-empted by other text
+cues (in front of AND behind it). Backtalk choices are the highest-priority read —
+direction keys commit instantly with no review step — so nothing may cut them off.
+
+Root cause: the earlier "choices win the speech race" fix (75849aa) only stopped
+DIALOGUE/subtitle lines from interrupting a choice. Two other vectors still cut it:
+  1. The coalesced ambient chain. AccessibilityWatcher.Update calls
+     BeginCoalescedCycle() every tick, which arms the FIRST SayCoalesced of that tick
+     to interrupt stale speech. While a long choice read was still playing, the first
+     ambient cue (Focus / Hotspots / Windows / Nav / GameInfo) on any LATER tick
+     interrupted it. The choice announcer uses raw Say (not SayCoalesced), so it never
+     participated in the coalescing that would have protected it.
+  2. Backtalk points won/lost (BacktalkPatches) used Say(interrupt:true), cutting off
+     a choice being read during a round.
+
+Fix:
+  - AccessibilityWatcher.Update: skip BeginCoalescedCycle() while IsChoiceActive().
+    With the interrupt un-armed, every coalesced ambient announcement that tick
+    APPENDS instead of silencing the in-progress option read. The choice announcer's
+    own Say(interrupt:true) still clears stale speech on the tick the set first
+    appears (evaluated before the arming check, so IsChoiceActive() is already true).
+  - BacktalkPatches point won/lost: interrupt only when NO choice is active
+    (!AccessibilityWatcher.IsChoiceActive()); otherwise queue behind the choice.
+    bt_won/bt_lost normally fire after the choice UI is gone, so they still interrupt
+    at round end.
+  - Net effect: while any dialogue/backtalk choice is on screen it holds the speech
+    floor — ambient cues and score feedback queue behind it, never cut it off.
+    Highlight-move re-announces (hover / joystick aim over a single option) use a
+    direct Say(interrupt:true) so they interrupt EACH OTHER — scrubbing stays
+    responsive, latest highlight wins. They can't cut the full set read: that lives
+    in the signature-change branch and returns before the highlight-move branch.
+
 ## v0.4.0 — SMS unread-only reading (TESTED, working per user 2026-07-14)
 
 NOTE: version scheme reset to single-digit minors climbing toward 1.0 (0.4, 0.5,

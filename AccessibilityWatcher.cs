@@ -54,7 +54,13 @@ namespace BeforeTheStormAccess
 
             // Ambient chain: first announcement this tick interrupts stale speech,
             // co-occurring ones append. See ScreenReader.SayCoalesced.
-            ScreenReader.BeginCoalescedCycle();
+            // EXCEPTION: while a choice (dialogue or backtalk) is on screen it holds
+            // the speech floor. Direction keys commit instantly with no review step,
+            // so the option read must never be cut off by an ambient cue landing a
+            // tick or two later. Leaving the interrupt un-armed makes every coalesced
+            // announcement this tick append instead of silencing the in-progress read.
+            if (!IsChoiceActive())
+                ScreenReader.BeginCoalescedCycle();
             Guarded("Subtitles", AnnounceSubtitleChanges);
             Guarded("Choices", AnnounceChoiceChanges);
             Guarded("Windows", _windowWatcher.Update);
@@ -308,8 +314,15 @@ namespace BeforeTheStormAccess
                         : string.Empty;
                     if (label.Length > 0)
                     {
-                        ScreenReader.SayCoalesced(
-                            Loc.Get("choice_entry", DirectionName(selectedIndex), label), true, false);
+                        // Highlight moves interrupt each other so hover/aim-scrubbing
+                        // stays responsive — the latest highlighted option is what
+                        // matters. A direct Say(interrupt:true) is used rather than the
+                        // coalesced path (which appends while a choice holds the floor,
+                        // per Update) so a new highlight replaces the previous readout.
+                        // The full-set read on the tick above is still protected: it
+                        // only replays when the signature itself changes.
+                        ScreenReader.Say(
+                            Loc.Get("choice_entry", DirectionName(selectedIndex), label), true, true, false);
                     }
                 }
             }
