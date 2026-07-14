@@ -99,6 +99,36 @@ All windows derive from `T_D25B278` (open = `gameObject.activeSelf`; `Open()`,
   Layer: "WorldInteraction".
 - eInteractVerb: kLook, kBacktalk, kSpeak, kKick, kOverlook, kCustomization, kNone.
 
+## Burner SMS (phone texts)
+
+- SMS threads appear in TWO windows sharing the same data + row shapes:
+  `T_6BD5080F` (JournalWindow's SMS tab — the normal review path, a `T_87122939`
+  journal tab) and `T_3FE8D8BE` BurnerSMSWindow (standalone phone; opens directly
+  only for special/Damon texts via `static s_newSMS`). Both have `AddMessage`/
+  `SetupPage` with the same InstantTraversal-then-Seen=true ordering. `T_87122939`
+  (journal tab base): `m_selection` (contact list `T_51AF6A60`), `m_specific`
+  (thread container), virtual `SetupPage()`. `T_6BD5080F` also: static
+  `s_smsByContact` (Dictionary<contact, Dictionary<nodeName, T_BFD9C065>>),
+  `SetSMSContact(name)` (marks ShouldShow, sets s_newSMS for Damon texts),
+  message rows named `TextMessage##`.
+- `T_3FE8D8BE` BurnerSMSWindow: `AddMessage(T_200B34A4)` adds one message row while
+  a thread builds; `SetupPage()` builds the whole thread (called by `SetupSpecific()`
+  when a contact is chosen, and directly from `OnOpen()` when `static s_newSMS`
+  (`T_BFD9C065`) opens the phone to a new text). `SetupSelection()` builds the contact
+  list (menu `m_contactMenu` = `T_51AF6A60`, unread count per contact). Key ordering:
+  SetupPage calls each node's `InstantTraversal()` then sets `node.Seen = true`, so
+  the pre-open unread state is only visible DURING AddMessage. `ResetWindow()` tears
+  down; `m_message` = row prefab (`T_AD5CB3F7`), `m_messageTable`/`m_messageScrollView`.
+- `T_200B34A4` SMSMessage (StoryTeller node): `sender`, `content`, `SMSParent`
+  (`T_BFD9C065`, cached ancestor). `Trigger()` routes to BurnerSMSWindow.AddMessage
+  (or the JournalWindow SMS tab `T_6BD5080F` when the journal is open).
+- `T_BFD9C065` SMSNode : `T_BA92A050`: `Seen` / `ShouldShow` (both save-backed flags
+  `Seen_SMS`+nodeName / `Show_SMS`+nodeName via GameStateModel), `specialSMS`
+  (`contact` contains "damon"), `unlockedAtStart` (Seen/ShouldShow forced true),
+  `contact`. Base `T_BA92A050` defines the `Seen`/`ShouldShow` save-flag getters.
+- `T_AD5CB3F7` SMSMessageRow: `sender`, `content` via `m_messageLabel`, `m_contactName`,
+  `m_timeStamp`; `Setup(msg, index, animateIn=!SMSParent.Seen && first)`.
+
 ## Player and navigation
 
 - `T_C3DD66D9` PlayerController (MonoBehaviour): `m_navAgent` (UnityEngine.AI

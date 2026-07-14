@@ -357,6 +357,19 @@ namespace BeforeTheStormAccess
                 if (text.Length == 0)
                     continue;
 
+                // SMS message rows (T_AD5CB3F7) are read by SmsPatches, which speaks
+                // only the unread portion of a thread. Skip their labels here so the
+                // journal's SMS tab isn't also read in full by this generic net.
+                if (label.GetComponentInParent<T_AD5CB3F7>() != null)
+                    continue;
+
+                // The global options bar (T_1FBA79F9) holds persistent action prompts
+                // (Select / Back / Exit). It re-enters the visible set on every page
+                // and, spoken as "new" content, interrupts whatever is being read
+                // (e.g. the SMS thread). Focused buttons are narrated by FocusHandler.
+                if (label.GetComponentInParent<T_1FBA79F9>() != null)
+                    continue;
+
                 LabelEntry entry = new LabelEntry();
                 entry.Path = GetPath(label.transform, window.transform);
                 entry.Text = text;

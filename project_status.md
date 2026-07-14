@@ -1,6 +1,59 @@
 # Before the Storm Access - Project Status
 
-Last updated: 2026-07-13
+Last updated: 2026-07-14
+
+## v0.4.0 — SMS unread-only reading (TESTED, working per user 2026-07-14)
+
+NOTE: version scheme reset to single-digit minors climbing toward 1.0 (0.4, 0.5,
+...). Earlier "0.13.x" numbering was dropped; prior builds were never published.
+
+- New SmsPatches.cs (SmsHandler + Harmony patches). Opening an SMS thread now reads
+  ONLY the unread messages when the thread has any; a thread with nothing new is
+  read in full (user deliberately reopened it).
+- Patched window: T_6BD5080F = JournalWindow's SMS tab — the way the user reviews
+  texts. It lives inside JournalWindow, which WindowWatcher reads, so v1 (which only
+  patched the standalone burner phone) failed: the whole thread still read via the
+  journal. Exposes AddMessage(T_200B34A4) + SetupPage() with the
+  InstantTraversal()-then-Seen=true ordering the fix depends on.
+- NOT YET PATCHED: T_3FE8D8BE BurnerSMSWindow (standalone phone; opens directly only
+  for special/Damon texts). Same shape, so the same SmsHandler will cover it — left
+  out until the user actually reaches the burner phone in-game. Per user request.
+- How: unread state is the game's own per-node Seen flag (T_BFD9C065.Seen, save-backed
+  "Seen_SMS"+nodeName). SetupPage marks every node Seen=true while building the page,
+  so the pre-open value must be captured earlier — during the row build, before that
+  node's Seen=true. Collection is a postfix on the message ROW's Setup (T_AD5CB3F7.Setup,
+  shared by both SMS windows), which runs after ShowFullMessage has resolved the labels
+  and while SMSParent.Seen still holds its pre-open value.
+- IMPORTANT: T_200B34A4.content is a localization KEY (e.g. "SMS_083"), not text; the
+  label resolves it through its localization sheet. Reading content directly spoke the
+  raw key. FIX: read the ROW's resolved labels — row.m_messageLabel.text (body) and
+  row.m_timeStamp.text (timestamp) — mirroring exactly what the player sees.
+- Timestamp: WindowWatcher used to read it as part of the row; once rows were suppressed
+  there it went missing, so RecordRow now also captures m_timeStamp and speaks it as a
+  short trailing aside after each message.
+- Flush: journal SetupPage PREFIX clears _pending (so only this thread's rows collect),
+  POSTFIX speaks the built thread; ResetTab postfix clears stale state.
+- WindowWatcher: skips any label with a T_AD5CB3F7 (SMS message row) ancestor, so
+  the journal's SMS message table isn't also read in full by the generic net.
+  ALSO skips labels under the global options bar T_1FBA79F9 (Select/Back/Exit
+  prompts). BUG FOUND IN TEST: the announce worked, but ~0.4s after a thread opened
+  WindowWatcher's poll saw the options bar's "Exit" label as new on-screen text and
+  spoke it with interrupt, cutting off the in-progress SMS read ("starts to read the
+  thread then exit preempts it"). Those prompts are persistent action labels, not
+  content, and FocusHandler narrates the focused button — so suppressing them from
+  the generic net fixes the preemption with no loss.
+  The contact-selection list is still read by FocusHandler (polls T_51AF6A60
+  generically) — unread counts intact.
+- Speech format: "{sender}: {content}. {timestamp}. ..." (unread messages only, or
+  the full thread when nothing is new). Chloe's own texts read as "Me"
+  (JOURNAL_CODE_SMS_ME), mirroring the game's label logic.
+- NEW MAPPINGS recorded: T_6BD5080F JournalSMSTab (AddMessage, SetupPage,
+  SetupSpecific, SetupSelection, ResetTab, s_smsByContact, SetSMSContact),
+  T_3FE8D8BE BurnerSMSWindow (AddMessage, SetupPage, s_newSMS), T_200B34A4 SMSMessage
+  (sender, content, SMSParent), T_BFD9C065 SMSNode (Seen, ShouldShow, specialSMS,
+  unlockedAtStart, contact, dreamScene), T_BA92A050 SMSNodeBase (Seen/ShouldShow save
+  flags), T_87122939 JournalTabBase (m_selection, m_specific, SetupPage virtual),
+  T_AD5CB3F7 SMSMessageRow (sender, m_messageLabel, Setup).
 
 ## Recent versions (v0.10.1 - v0.11.1, from user playtesting)
 
