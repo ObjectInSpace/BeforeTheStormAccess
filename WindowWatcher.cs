@@ -34,6 +34,7 @@ namespace BeforeTheStormAccess
             "TransitionWindow", // visual fade only
             "MovieWindow",      // video playback
             "FreeRoamWindow",   // Phase 3 (hotspots); its HUD labels flap constantly
+            "ChoicesWindow",    // end-of-episode recap read by ChoicesHandler
         };
 
         private float _nextPollTime;

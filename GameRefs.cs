@@ -93,6 +93,20 @@ namespace BeforeTheStormAccess
             }
         }
 
+        /// <summary>
+        /// Network manager (online/offline + sign-in state), or null. The Choices
+        /// recap fetches its world/friends percentages from the stats server through
+        /// this manager; offline, those numbers never arrive and stay 0.
+        /// </summary>
+        public static T_4CC5666A NetworkManager
+        {
+            get
+            {
+                T_A6E913D1 gm = GameManager;
+                return gm != null ? gm.m_networkManager : null;
+            }
+        }
+
         /// <summary>Fetches a UI window by its registered name, or null when unavailable.</summary>
         public static TWindow GetWindow<TWindow>(string name) where TWindow : T_D25B278
         {
@@ -118,6 +132,9 @@ namespace BeforeTheStormAccess
 
         /// <summary>The free roam HUD window, or null.</summary>
         public static T_F8FE3E1C FreeRoamWindow => GetWindow<T_F8FE3E1C>("FreeRoamWindow");
+
+        /// <summary>The end-of-episode / main-menu choices recap window, or null.</summary>
+        public static T_35562F97 ChoicesWindow => GetWindow<T_35562F97>("ChoicesWindow");
 
         /// <summary>
         /// The follow camera's transform, or null. This is the origin the game uses

@@ -19,6 +19,7 @@ namespace BeforeTheStormAccess
         private readonly HotspotHandler _hotspotHandler = new HotspotHandler();
         private readonly GameInfoHandler _gameInfoHandler = new GameInfoHandler();
         private readonly BacktalkHandler _backtalkHandler = new BacktalkHandler();
+        private readonly ChoicesHandler _choicesHandler = new ChoicesHandler();
         private readonly NavigationHandler _navigationHandler;
 
         public AccessibilityWatcher()
@@ -69,6 +70,7 @@ namespace BeforeTheStormAccess
             Guarded("Navigation", _navigationHandler.Update);
             Guarded("GameInfo", _gameInfoHandler.Update);
             Guarded("Backtalk", _backtalkHandler.Update);
+            Guarded("Choices", _choicesHandler.Update);
         }
 
         /// <summary>
@@ -132,6 +134,12 @@ namespace BeforeTheStormAccess
                 if (choiceText.Length > 0)
                 {
                     ScreenReader.Say(choiceText, true, true, true);
+                    return;
+                }
+
+                // The end-of-episode choices recap: re-read the shown decisions.
+                if (ChoicesHandler.RepeatCurrent())
+                {
                     return;
                 }
 

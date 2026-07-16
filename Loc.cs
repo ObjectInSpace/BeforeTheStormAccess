@@ -236,6 +236,19 @@ namespace BeforeTheStormAccess
             Add("backtalk_prefix", "Backtalk:");
             Add("choice_entry", "{0}: {1}");
 
+            // End-of-episode choices recap (ChoicesWindow).
+            Add("choices_recap_prefix", "Choices for");
+            Add("choices_decision", "Decision {0}:");
+            Add("choices_you_chose", "you chose {0}");
+            Add("choices_alternative", "The other option: {0}");
+            Add("choices_option_stat", "{0}, {1} percent");
+            // Spoken once per recap when the world/friends percentages are absent.
+            // They come from the online stats server, so they are unavailable offline
+            // or when not signed in.
+            Add("choices_stats_offline", "World and friends stats unavailable: not connected to the internet.");
+            Add("choices_stats_not_signed_in", "World and friends stats unavailable: not signed in.");
+            Add("choices_stats_unavailable", "World and friends stats unavailable.");
+
             Add("window_opened", "{0} window.");
             Add("diagnostics_dumped", "Diagnostics written to log.");
 
