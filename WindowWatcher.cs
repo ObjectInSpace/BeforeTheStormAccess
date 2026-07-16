@@ -341,6 +341,20 @@ namespace BeforeTheStormAccess
             /// announced by the focus handler, not the generic change tracker.
             /// </summary>
             public bool OwnedByListButton;
+
+            /// <summary>
+            /// For labels on a journal page (T_32AFC3D1), the label's index within the
+            /// page's authored m_labels array — the narrative reading order the page is
+            /// filled in. -1 for non-page labels, which fall back to positional order.
+            /// </summary>
+            public int PageOrder;
+
+            /// <summary>
+            /// A stable per-page grouping value (the page root's screen y) so multiple
+            /// journal pages stay in top-to-bottom order while each page's own rows keep
+            /// their authored sequence. 0 for non-page labels.
+            /// </summary>
+            public float PageGroupY;
         }
 
         private static List<LabelEntry> CollectVisibleLabels(T_D25B278 window)
@@ -379,12 +393,53 @@ namespace BeforeTheStormAccess
                 T_9E2FDFCF owningButton = label.GetComponentInParent<T_9E2FDFCF>();
                 entry.OwnedByListButton = owningButton != null && owningButton.m_menu != null;
 
+                // Journal pages fill their m_labels array in narrative order, and that
+                // order does NOT always match screen layout — choice-dependent rows get
+                // inserted at positions that read out of sequence under a pure top-to-
+                // bottom sort. Anchor page labels to their authored array index so each
+                // page reads in the order it was written.
+                entry.PageOrder = -1;
+                T_32AFC3D1 page = label.GetComponentInParent<T_32AFC3D1>();
+                if (page != null && page.m_labels != null)
+                {
+                    for (int j = 0; j < page.m_labels.Length; j++)
+                    {
+                        if (page.m_labels[j] == label)
+                        {
+                            entry.PageOrder = j;
+                            entry.PageGroupY = page.transform.position.y;
+                            break;
+                        }
+                    }
+                }
+
                 result.Add(entry);
             }
 
-            // Reading order: top to bottom, then left to right (NGUI y grows upward).
-            result.Sort(CompareByPosition);
+            // Reading order: journal page rows keep their authored array order (grouped
+            // per page, pages top to bottom); everything else is top to bottom, then
+            // left to right (NGUI y grows upward).
+            result.Sort(CompareForReading);
             return result;
+        }
+
+        private static int CompareForReading(LabelEntry a, LabelEntry b)
+        {
+            // Each entry gets one vertical anchor: a page label uses its page root's y
+            // so all of a page's rows group together; a loose label uses its own y.
+            // NGUI y grows upward, so larger y reads first (top to bottom).
+            float anchorA = a.PageOrder >= 0 ? a.PageGroupY : a.Position.y;
+            float anchorB = b.PageOrder >= 0 ? b.PageGroupY : b.Position.y;
+            if (anchorA != anchorB)
+                return anchorB.CompareTo(anchorA);
+
+            // Same vertical group: within one page, authored array order; otherwise
+            // left to right. (Two labels of the same page share PageGroupY, so they land
+            // here and order by index — the narrative sequence.)
+            if (a.PageOrder >= 0 && b.PageOrder >= 0)
+                return a.PageOrder.CompareTo(b.PageOrder);
+
+            return a.Position.x.CompareTo(b.Position.x);
         }
 
         private static int CompareByPosition(LabelEntry a, LabelEntry b)

@@ -249,6 +249,9 @@ namespace BeforeTheStormAccess
             Add("choices_stats_not_signed_in", "World and friends stats unavailable: not signed in.");
             Add("choices_stats_unavailable", "World and friends stats unavailable.");
 
+            // SMS contact row on the phone / journal SMS tab: "{name}, {unread}".
+            Add("sms_contact_unread", "{0}, {1}");
+
             Add("window_opened", "{0} window.");
             Add("diagnostics_dumped", "Diagnostics written to log.");
 

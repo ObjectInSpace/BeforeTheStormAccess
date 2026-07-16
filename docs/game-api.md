@@ -127,7 +127,26 @@ All windows derive from `T_D25B278` (open = `gameObject.activeSelf`; `Open()`,
   (`contact` contains "damon"), `unlockedAtStart` (Seen/ShouldShow forced true),
   `contact`. Base `T_BA92A050` defines the `Seen`/`ShouldShow` save-flag getters.
 - `T_AD5CB3F7` SMSMessageRow: `sender`, `content` via `m_messageLabel`, `m_contactName`,
-  `m_timeStamp`; `Setup(msg, index, animateIn=!SMSParent.Seen && first)`.
+  `m_timeStamp`; `Setup(msg, index, animateIn=!SMSParent.Seen && first)` — calls
+  `ShowFullMessage()` once at build. `ShowFullMessage()` writes the row's real content
+  into `m_messageLabel` (called AGAIN by `CR_ActiveMessages` when a queued message
+  reveals). LIVE-REVEAL ORDERING: both windows' `CR_ActiveMessages` coroutine builds
+  new-conversation rows HIDDEN (`gameObject.SetActive(_1F2CFCB7.Count == 0)` in
+  AddMessage — only index 0 stays active), then activates + reveals them one at a time
+  (typing dots `.`/`..`/`...`, then `ShowFullMessage()`). So a row's
+  `gameObject.activeInHierarchy` at Setup discriminates static history (active) from a
+  queued live message (inactive); a later `ShowFullMessage` while active is the reveal.
+- `T_EF99895D` SMSContactRow (`T_C714B4A0`): one contact button on the phone/journal
+  contact list. `m_name`/`m_highlightedName` (contact name label), `m_newMessage`/
+  `m_highlightedNewMessage` (unread-count label "N new messages", localized), `m_button`
+  (`T_9E2FDFCF`, the selectable added to the menu `T_51AF6A60`), `m_index`. The name +
+  unread text live HERE, not under `m_button` — FocusHandler resolves the contact via
+  `GetComponentInParent<T_EF99895D>()` from the selected button.
+- `T_32AFC3D1` JournalPageFiller: `m_labels` (`T_A243E23D[]`, authored in NARRATIVE
+  reading order), `m_bioPage`, `Data` (`T_BA92A050`). `TextTriggered(text, key)` fills
+  `m_labels[i++]` sequentially — so the array index is the intended reading order, which
+  choice-dependent rows can make DIVERGE from screen layout. WindowWatcher orders page
+  labels by their `m_labels` index (grouped per page by the page root y), not raw y/x.
 
 ## Player and navigation
 

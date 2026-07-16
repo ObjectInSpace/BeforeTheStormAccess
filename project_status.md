@@ -1,6 +1,65 @@
 # Before the Storm Access - Project Status
 
-Last updated: 2026-07-14
+Last updated: 2026-07-16
+
+## v0.7.0 — SMS live-order + burner phone + journal page order (DEPLOYED, PENDING IN-GAME TEST)
+
+User report (2026-07-16), four related issues:
+  1. Burner phone contacts/messages screen only said "contacts"/"messages" (window
+     titles) — the contact names and thread content were never read.
+  2. Live back-and-forth texting read the messages BADLY OUT OF ORDER.
+  3. The same out-of-order problem happens in journal SMS threads that update in real
+     time (Chloe types, someone replies) — a general SMS issue, not burner-only.
+  4. Journal PAGES (not SMS): choice-dependent rows read out of order, disjointed.
+
+Root causes:
+  - SMS ordering: the old handler recorded every row on T_AD5CB3F7.Setup and spoke the
+    WHOLE thread at once on SetupPage postfix. But a live conversation is animated in by
+    CR_ActiveMessages ONE MESSAGE AT A TIME (queued rows built hidden, then activated +
+    ShowFullMessage as each "arrives"). Speaking the batch up front raced that animation
+    → wrong order / future messages read early.
+  - Burner phone was never patched (deferred in v0.4.0). Its SetupPage is a SEPARATE
+    method from the journal tab's, so no flush fired; contacts weren't read because the
+    contact button (T_9E2FDFCF) added to the menu carries no name — the name/unread live
+    on the sibling/owner T_EF99895D.
+  - Journal page order: WindowWatcher sorted page labels purely by screen y/x. But a
+    journal page (T_32AFC3D1) fills m_labels[] in NARRATIVE order via TextTriggered, and
+    choice-dependent rows are placed where screen layout diverges from that order.
+
+Fixes (SmsPatches.cs rewritten; shared by both SMS windows):
+  - Two modes per thread, decided at the SetupPage flush from each row's
+    activeInHierarchy (queued live rows are inactive at flush; AddMessage applies
+    SetActive AFTER Setup, so liveness is judged at flush, not at RecordRow):
+      * STATIC open (all rows visible): batch, unread-only when there are unread,
+        else full thread — journal rule, now also for the burner.
+      * LIVE conversation (queued rows present): history batch spoken now; each queued
+        message spoken on its own when it reveals.
+  - New postfix on T_AD5CB3F7.ShowFullMessage: when armed and the row is active (the
+    coroutine reveal, not the Setup-time call) and not already spoken, speak that single
+    message with interrupt:false so reveals queue in order. Typing-dots placeholder
+    (./../...) guarded out. Row instance IDs dedupe against the history batch.
+  - Burner phone (T_3FE8D8BE) now patched: SetupPage prefix Reset + postfix
+    AnnounceThread (mirrors the journal tab); BackInSpecific postfix Reset. So viewing
+    the phone normally reads like the journal, and a live incoming Damon text reveals
+    message by message.
+  - FocusHandler: SMS contact rows read as "{name}, {unread}" via
+    GetComponentInParent<T_EF99895D>() from the selected button (m_name +
+    active new-message label). Journal contacts already worked (focus lands on the
+    T_EF99895D object); this also covers the burner, where focus lands on the button.
+    New Loc key sms_contact_unread.
+
+Fix (WindowWatcher.cs) for journal page order:
+  - CollectVisibleLabels now anchors each label on a T_32AFC3D1 page to its index in the
+    page's authored m_labels[] array (grouped per page by the page root's y). Non-page
+    labels keep positional top-to-bottom/left-to-right. Single-anchor total order in
+    CompareForReading (no transitivity bug). Both the on-open read and the change tracker
+    use it.
+
+NEW MAPPINGS (docs\game-api.md): T_AD5CB3F7.ShowFullMessage + live-reveal mechanism
+(queued rows hidden via SetActive, revealed by CR_ActiveMessages); T_EF99895D
+SMSContactRow (m_name/m_highlightedName, m_newMessage/m_highlightedNewMessage, m_button,
+m_index); T_32AFC3D1 JournalPageFiller (m_labels authored in reading order, TextTriggered
+fills sequentially).
 
 ## v0.6.2 — Interact "on screen" gate reads the game's own flag (DEPLOYED, PENDING IN-GAME TEST)
 

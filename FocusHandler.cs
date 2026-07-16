@@ -170,6 +170,14 @@ namespace BeforeTheStormAccess
         /// </summary>
         private static string ComposeLabelText(GameObject focused)
         {
+            // SMS contact rows (burner phone + journal SMS tab) carry the contact name
+            // and unread count on the sibling T_EF99895D component, not under the
+            // button's own GameObject, so the generic label sweep finds nothing. Read
+            // the contact directly when the focused button belongs to one.
+            string contact = ComposeSmsContact(focused);
+            if (contact.Length > 0)
+                return contact;
+
             T_A243E23D[] labels = focused.GetComponentsInChildren<T_A243E23D>(false);
             if (labels == null || labels.Length == 0)
                 return string.Empty;
@@ -205,6 +213,50 @@ namespace BeforeTheStormAccess
             }
 
             return builder.ToString();
+        }
+
+        /// <summary>
+        /// "{contact name}[, N new messages]" when the focused element is an SMS
+        /// contact row, else empty. The contact name and unread count live on the
+        /// T_EF99895D component (found on the focused object or a parent), whose
+        /// name/new-message labels are toggled by selection — so read the resolved
+        /// name and unread count from its fields rather than sweeping child labels.
+        /// </summary>
+        private static string ComposeSmsContact(GameObject focused)
+        {
+            T_EF99895D contact = focused.GetComponent<T_EF99895D>();
+            if (contact == null)
+                contact = focused.GetComponentInParent<T_EF99895D>();
+            if (contact == null)
+                return string.Empty;
+
+            string name = contact.m_name != null ? TextUtil.CleanLabel(contact.m_name.text) : string.Empty;
+            if (name.Length == 0)
+                return string.Empty;
+
+            // The unread-count label ("1 new message" / "N new messages") is resolved
+            // and localized by the game; read whichever variant is currently shown.
+            string unread = ReadNewMessageLabel(contact);
+            if (unread.Length > 0)
+                return Loc.Get("sms_contact_unread", name, unread);
+
+            return name;
+        }
+
+        /// <summary>The active new-message label text on a contact row, or empty.</summary>
+        private static string ReadNewMessageLabel(T_EF99895D contact)
+        {
+            string text = LabelIfActive(contact.m_highlightedNewMessage);
+            if (text.Length == 0)
+                text = LabelIfActive(contact.m_newMessage);
+            return text;
+        }
+
+        private static string LabelIfActive(T_A243E23D label)
+        {
+            if (label == null || !label.gameObject.activeInHierarchy)
+                return string.Empty;
+            return TextUtil.CleanLabel(label.text);
         }
 
         /// <summary>
