@@ -2,6 +2,110 @@
 
 Last updated: 2026-07-14
 
+## v0.6.2 — Interact "on screen" gate reads the game's own flag (DEPLOYED, PENDING IN-GAME TEST)
+
+User report (2026-07-16): certain in-range interactables — most notably scene EXITS —
+don't announce "in range" even though the game lets you interact with them (verb-based
+interact, same mechanic as doors/items, NOT walk-through boundaries). Log + F10 dumps
+provided.
+
+Log analysis:
+  - Verb-carrying exits DO work: "Door. down: Leave." / "Dormitory Entrance. down:
+    Unlock." announced fine when in range. So the browser/verb path is OK for those.
+  - The failing case is the CheckOnScreen gate over-suppressing. v0.13.1 added
+    IsInteractPromptOnScreen by RE-DERIVING the game's CheckOnScreen (T_572A4969:234)
+    viewport math from Camera.main + the aim point. That re-derivation can diverge from
+    what the game actually decides (extended-view / UI-3D-camera offsets, T_34182F31.main
+    vs Camera.main, anchor-vs-aimPoint, per-frame timing), and when it does the mod
+    suppresses a prompt the game would allow — silence on exits approached head-on.
+
+Fix — read the verdict instead of recomputing it:
+  - IsInteractPromptOnScreen now returns freeRoam.m_interactUI.m_choiceUI.gameObject
+    .activeInHierarchy. The game's CheckOnScreen runs every frame and stores its result
+    by enabling/disabling that exact object (choice UI live == interact actionable). This
+    is the signal the HotspotHandler comment always said to use; the implementation was
+    re-deriving it instead. The old geometric mirror is kept as a fallback only when the
+    choice UI object can't be reached, and still returns true when the camera is
+    unreadable (no over-suppression).
+  - Refactor: distance test extracted to IsDistanceOk (camera OR main-character within
+    m_interactDistanceOverride); IsWithinInteractDistance = IsDistanceOk && angle &&
+    promptOnScreen. New helper InteractChoiceUI() (T_6876113C m_choiceUI on the interact
+    UI). No new GameRefs mappings needed (m_interactUI + m_choiceUI already public).
+  - F10 dump now prints, for the current interact target: hasPointAt, choiceUIActive,
+    distanceOk, angleOk, promptOnScreen, and the final interactable verdict — so any
+    remaining "in range but silent" is diagnosable in one line.
+  - NOTE: pure walk-through boundary exits (Boundarytrigger/DoorwayTrigger obj, PointXtoY
+    navpoints) are isOnlyTrigger with 0 verbs; the game shows no interact prompt for them
+    (crossed by walking). User confirmed the missing exits are verb-interact ones, so
+    those boundaries are out of scope here. Revisit as a separate "exit nearby" cue if
+    the user later reports walk-through exits.
+
+## v0.6.1 — Choices recap explains absent stats (DEPLOYED, PENDING IN-GAME TEST)
+
+User report (2026-07-16): the recap still "isn't reading the world stats." User is on
+the GOG OFFLINE build and was NOT signed in.
+
+Diagnosis (not a reading bug): the world/friends percentages come from Deck Nine's
+online stats server. T_35562F97 fetches them on open (GetWorldChoices/GetFriendChoices)
+and only the async callback (OnFriendChoicesLoaded / _1C3E99DD9) populates
+T_80D0C1C9.m_worldPercent/m_friendPercent. Offline + not signed in, that fetch never
+happens, so every option's stat stays 0. The mod was reading them correctly — there
+were none. A sighted player sees blank percentages on the same setup (the game also
+blanks the on-screen m_percent label unconditionally in this build). So the mod was
+silently omitting stats, which read as "the mod skipped them."
+
+Fix — ChoicesHandler now EXPLAINS the absence instead of staying silent:
+  - Tracks anyStat across the whole recap (any option with a stat > 0). If none
+    carried a stat, appends a one-time note chosen from the game's network state:
+    choices_stats_offline (CurrentNetworkState != Online),
+    choices_stats_not_signed_in (online but CurrentSignInState != Online),
+    else choices_stats_unavailable. anyStat feeds the signature ("|nostats"), so if
+    stats DO arrive later (online session) the recap re-speaks with the numbers.
+  - Diagnostic: logs each option's raw world/friend/chosen ints, so the next test
+    confirms whether stats are genuinely 0 (offline) or populated-but-unread.
+  - GameRefs.NetworkManager accessor added (T_A6E913D1.m_networkManager, type
+    T_4CC5666A with CurrentNetworkState / CurrentSignInState, enum Online/Offline/
+    Unknown/None). New Loc keys: choices_stats_offline / _not_signed_in / _unavailable.
+  - To hear actual percentages the user must run online AND signed in; otherwise the
+    new spoken note is the expected, correct behavior.
+
+## v0.6.0 — Choices recap screen reads decisions + stats (DEPLOYED, PENDING IN-GAME TEST)
+
+User report: the end-of-episode / main-menu "Choices" recap screen read the whole
+screen top-to-bottom (WindowWatcher's generic net) instead of the decisions the
+player made, and never read the stats.
+
+Root cause: ChoicesWindow (T_35562F97, gameObject "ChoicesWindow") was NOT excluded
+from WindowWatcher, so the generic label net dumped episode title + every option of
+every decision + tab captions + options bar as one undifferentiated wall — with no
+"which one did I pick" and no percentages. The on-screen percent labels are blanked
+in this build: T_80D0C1C9.ShowStats / ShowPercent set m_percent.text = "" and
+m_percent.enabled = false, so the visible label had no text to read. The actual
+numbers live only in the option components (m_worldPercent / m_friendPercent ints).
+
+Fix — new ChoicesHandler.cs (polling, in AccessibilityWatcher after Backtalk):
+  - Reads the ACTIVE choice group: whichever T_35562F97.m_majorChoices[i] /
+    m_minorChoices[i] is activeInHierarchy (ShowMajor/MinorChoices ResetWindow-then-
+    activate exactly one, so the single active group is the visible tab+episode).
+  - Per decision (T_8F7CA4EC.m_choices) reads each option (T_80D0C1C9): chosen
+    option first ("you chose X"), then the alternative ("The other option: Y"),
+    using m_isChosen (always correct locally) and m_choice.text (resolved label).
+  - Stats: m_worldPercent (world icon active) else m_friendPercent, appended only
+    when > 0. SCALING: SetWorld/FriendPercent store a WHOLE percentage point
+    (server "0.67" -> RoundToInt(0.67*100)=67) and T_8F7CA4EC.Setup rebalances the
+    pair to sum to 100 — so the field IS the percent; speak it directly, do NOT /100.
+    (Stats are online-only; offline they stay 0 and are simply omitted.)
+  - Signature-gated: re-speaks only when the shown content changes (window open, tab
+    switch major/minor, episode change, stats arriving from the server).
+  - Repeat key (grave) re-reads the recap via ChoicesHandler.RepeatCurrent(), added
+    to HandleModKeys after the live-dialogue-choice branch.
+  - ChoicesWindow added to WindowWatcher._excludedWindows so the two don't both speak.
+  - GameRefs.ChoicesWindow accessor added. New Loc keys: choices_recap_prefix,
+    choices_decision, choices_you_chose, choices_alternative, choices_option_stat.
+  - NOTE: ConsequenceWindow (T_B6500484) is the SEPARATE in-gameplay "choice made"
+    popup (m_majorChoiceMsg/m_minorChoiceMsg) — NOT touched here; still read by the
+    generic net. Revisit if the user reports it too.
+
 ## v0.5.0 — Choices hold the speech floor (DEPLOYED, PENDING IN-GAME TEST)
 
 User report: backtalk challenge / choice text was being pre-empted by other text

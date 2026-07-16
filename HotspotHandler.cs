@@ -137,37 +137,58 @@ namespace BeforeTheStormAccess
         /// </summary>
         private static bool IsWithinInteractDistance(T_6FD30C1C hotspot)
         {
-            Vector3 aimPoint = GetAimPoint(hotspot);
-            float maxDistance = hotspot.m_interactDistanceOverride;
-
-            Transform camera = GameRefs.FollowCameraTransform;
-            bool distanceOk = camera != null
-                && Vector3.Distance(aimPoint, camera.position) < maxDistance;
-
-            T_A6E913D1 gm = GameRefs.GameManager;
-            if (!distanceOk && gm != null && gm.m_mainCharacter != null)
-            {
-                distanceOk = Vector3.Distance(aimPoint, gm.m_mainCharacter.transform.position) < maxDistance;
-            }
-
-            if (!distanceOk)
+            if (!IsDistanceOk(hotspot))
                 return false;
 
-            if (!IsWithinInteractAngle(hotspot, camera))
+            if (!IsWithinInteractAngle(hotspot, GameRefs.FollowCameraTransform))
                 return false;
 
             return IsInteractPromptOnScreen(hotspot);
         }
 
         /// <summary>
-        /// Mirrors the game's CheckOnScreen (T_572A4969.cs:234): the interact prompt
-        /// is actionable only when the aim point is in front of the main camera
-        /// (angle &lt; 90) and its projection lands inside the viewport [0,1]. This is
-        /// the query the game itself runs each frame to enable/disable the choice UI.
-        /// Returns true when the camera is unreadable, to avoid over-suppressing.
+        /// The hotspot's aim point is within its interact radius of either the follow
+        /// camera or the main character — the game measures reach from both (a UI-scale
+        /// gate in FreeRoamWindow uses the character as a fallback when the camera is
+        /// out of range).
+        /// </summary>
+        private static bool IsDistanceOk(T_6FD30C1C hotspot)
+        {
+            Vector3 aimPoint = GetAimPoint(hotspot);
+            float maxDistance = hotspot.m_interactDistanceOverride;
+
+            Transform camera = GameRefs.FollowCameraTransform;
+            if (camera != null && Vector3.Distance(aimPoint, camera.position) < maxDistance)
+                return true;
+
+            T_A6E913D1 gm = GameRefs.GameManager;
+            return gm != null && gm.m_mainCharacter != null
+                && Vector3.Distance(aimPoint, gm.m_mainCharacter.transform.position) < maxDistance;
+        }
+
+        /// <summary>
+        /// Whether the interact prompt is actionable right now — the exact signal the
+        /// game acts on, not a re-derivation of it. The interact UI runs CheckOnScreen
+        /// (T_572A4969.cs:234) every frame and stores the verdict by enabling or
+        /// disabling m_choiceUI's gameObject: the choice UI is live only when the aim
+        /// point is in front of the camera AND projects inside the viewport, which is
+        /// precisely when pressing interact does something. Reading that flag directly
+        /// avoids the subtle mismatches an independent viewport re-computation hits
+        /// (extended-view / UI-3D-camera offsets, T_34182F31.main vs Camera.main, and
+        /// the anchor-vs-aim-point timing) — mismatches that were silently suppressing
+        /// valid prompts, most visibly scene exits approached head-on.
+        ///
+        /// Falls back to the geometric mirror only when the choice UI object can't be
+        /// reached, and returns true when even the camera is unreadable, to avoid
+        /// over-suppressing.
         /// </summary>
         private static bool IsInteractPromptOnScreen(T_6FD30C1C hotspot)
         {
+            T_6876113C choiceUI = InteractChoiceUI();
+            if (choiceUI != null)
+                return choiceUI.gameObject.activeInHierarchy;
+
+            // Fallback mirror of CheckOnScreen when the choice UI isn't reachable.
             // The game's CheckOnScreen uses T_34182F31.main, which is Camera.main
             // (with a cached fallback only when Camera.main is momentarily null).
             Camera main = Camera.main;
@@ -181,6 +202,20 @@ namespace BeforeTheStormAccess
 
             Vector3 viewport = main.ScreenToViewportPoint(main.WorldToScreenPoint(aimPoint));
             return viewport.x > 0f && viewport.y > 0f && viewport.x < 1f && viewport.y < 1f;
+        }
+
+        /// <summary>
+        /// The interact UI's choice sub-UI (T_6876113C), whose active state is the
+        /// game's own "interact is actionable" flag, or null when the free-roam
+        /// interact UI isn't present.
+        /// </summary>
+        private static T_6876113C InteractChoiceUI()
+        {
+            T_F8FE3E1C freeRoam = GameRefs.FreeRoamWindow;
+            if (freeRoam == null || freeRoam.m_interactUI == null)
+                return null;
+
+            return freeRoam.m_interactUI.m_choiceUI;
         }
 
         /// <summary>
@@ -498,6 +533,10 @@ namespace BeforeTheStormAccess
             else
             {
                 Vector3 origin = SpatialUtil.PlayerPosition();
+                T_6876113C choiceUI = InteractChoiceUI();
+                string choiceUiState = choiceUI == null
+                    ? "?"
+                    : choiceUI.gameObject.activeInHierarchy.ToString();
                 Main.Log.LogInfo("interact UI hotspot='" + GetHotspotName(interactTarget)
                     + "' obj=" + interactTarget.gameObject.name
                     + " playerDistance=" + (interactTarget.transform.position - origin).magnitude.ToString("0.00")
@@ -507,6 +546,12 @@ namespace BeforeTheStormAccess
                     + " usesAngleInteract=" + interactTarget.usesAngleInteract
                     + " leftAngle=" + interactTarget.m_LeftInteractAngle
                     + " rightAngle=" + interactTarget.m_RightInteractAngle
+                    + " hasPointAt=" + (interactTarget.m_pointAt != null)
+                    + " choiceUIActive=" + choiceUiState
+                    + " distanceOk=" + IsDistanceOk(interactTarget)
+                    + " angleOk=" + IsWithinInteractAngle(interactTarget, GameRefs.FollowCameraTransform)
+                    + " promptOnScreen=" + IsInteractPromptOnScreen(interactTarget)
+                    + " -> interactable=" + IsWithinInteractDistance(interactTarget)
                     + " activeVerbs=" + CountActive(interactTarget.m_activeVerbs)
                     + " nonInteractVerbs=" + CountActive(interactTarget.m_nonInteractVerbs)
                     + " localTriggerVerbs=" + CountActive(interactTarget.m_localTriggerVerbs));
