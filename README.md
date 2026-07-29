@@ -81,3 +81,13 @@ Placeholders like {0} must remain. Missing keys fall back to English.
 ## Credits
 
 Built with BepInEx 5, HarmonyX, and Tolk.
+
+## License
+
+GPL-3.0. See LICENSE for the full text, and THIRD_PARTY_NOTICES.txt for the
+licenses of the bundled components (BepInEx, HarmonyX/MonoMod/Cecil, Tolk,
+NVDA controller client).
+
+This mod is an unofficial, fan-made accessibility project. It is not affiliated
+with or endorsed by Deck Nine Games or Square Enix. It contains no game assets
+or game code; you must own a copy of the game to use it.
