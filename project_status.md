@@ -9,10 +9,10 @@ the release is numbered 0.9.0 but contains everything through the internal
 0.9.1/0.9.2 builds (Prism speech, all 9 languages, How to Play/tutorials incl.
 controller icons). A v1.0.0 tag was briefly pushed and then deleted.
 Release assets: windows (tested), macos + linux (experimental, never run).
-How to Play / controller icon reading was released before its in-game test;
-still pending (see v0.9.1/v0.9.2 below).
+How to Play / controller icon reading: TESTED, working per user 2026-10-20.
+No pending in-game tests.
 
-## v0.9.2 — Controller icons in dynamic labels (BUILT, PENDING IN-GAME TEST)
+## v0.9.2 — Controller icons in dynamic labels (TESTED, working per user 2026-10-20)
 
 User request: cover controller glyphs too (v0.9.1 skipped them).
   - KeyTokenText.ControllerName: "[P..]"/"[X..]" tokens from DawnUI's joystick
@@ -27,10 +27,9 @@ User request: cover controller glyphs too (v0.9.1 skipped them).
     Xbox One pad_menu / pad_view; Xbox 360 Start/Back; "[XOLDSEL]" = Back.
   - Keyboard tokens are looked up first, so "[P]", "[X]", "[PGUP]" stay keys.
   - 10 new mod keys, all translated (77 keys per file).
-Pending test: How to Play and a tutorial prompt with a controller connected
-(any pad), if available.
+Tested by user 2026-10-20: working.
 
-## v0.9.1 — How to Play + tutorial prompts read (BUILT, PENDING IN-GAME TEST)
+## v0.9.1 — How to Play + tutorial prompts read (TESTED, working per user 2026-10-20)
 
 User report (2026-10-20): v0.9.0 tested and working (Prism, all tests, new
 translations). But the "How to Play" text isn't read.
@@ -58,8 +57,7 @@ Fix:
     signature).
   - Simulated offline on the EN/FR How to Play text: "Use W, A, S, D to move.
     Use mouse to move the camera. Hold Left Shift to move faster..."
-Pending test: open How to Play (pause menu), flip pages with left/right; check
-tutorial prompts in a new game; press F10 on How to Play if anything reads oddly.
+Tested by user 2026-10-20: working.
 
 ## v0.9.0 — Prism speech + Mac/Linux packages (TESTED, working per user 2026-10-20)
 
@@ -100,7 +98,7 @@ Assembly-CSharp keeps the same T_ names is unknown. The README marks Mac/Linux
 experimental. If a build becomes available, decompile into a gitignored
 decompiled-mac\ and diff the T_ names used in GameRefs.cs and across the mod.
 
-Pending tests (Windows, NVDA):
+Tests (Windows, NVDA) — all passed per user 2026-10-20:
   1. Log: "Prism: loaded ...prism.dll", "Prism: speaking through NVDA."
   2. Normal play: subtitles, choices, menus, repeat key; braille if available.
   3. NVDA sleep mode: interrupting announcements still cut off.
@@ -142,7 +140,7 @@ Translations: Translations\*.txt for fr, de, es, es-mx, it, pt, ja, zh-hans
 (64 keys each). Build copies them to BepInEx\plugins; Package-Mod.ps1 (from the
 PR) ships them. scripts\Check-Translations.ps1 validates keys + placeholders.
 
-Pending tests:
+Tests — passed per user 2026-10-20 ("everything talks including the new translations"):
   1. English: choices read "Choices: ...", backtalk "Backtalk: ...", recap
      starts "Your Choices.", key names in settings, window titles.
   2. Switch Text language to French (or any): mod speech follows live; log
@@ -218,7 +216,7 @@ SMSContactRow (m_name/m_highlightedName, m_newMessage/m_highlightedNewMessage, m
 m_index); T_32AFC3D1 JournalPageFiller (m_labels authored in reading order, TextTriggered
 fills sequentially).
 
-## v0.6.2 — Interact "on screen" gate reads the game's own flag (DEPLOYED, PENDING IN-GAME TEST)
+## v0.6.2 — Interact "on screen" gate reads the game's own flag (TESTED, working)
 
 User report (2026-07-16): certain in-range interactables — most notably scene EXITS —
 don't announce "in range" even though the game lets you interact with them (verb-based
@@ -256,7 +254,7 @@ Fix — read the verdict instead of recomputing it:
     those boundaries are out of scope here. Revisit as a separate "exit nearby" cue if
     the user later reports walk-through exits.
 
-## v0.6.1 — Choices recap explains absent stats (DEPLOYED, PENDING IN-GAME TEST)
+## v0.6.1 — Choices recap explains absent stats (TESTED, working)
 
 User report (2026-07-16): the recap still "isn't reading the world stats." User is on
 the GOG OFFLINE build and was NOT signed in.
@@ -285,7 +283,7 @@ Fix — ChoicesHandler now EXPLAINS the absence instead of staying silent:
   - To hear actual percentages the user must run online AND signed in; otherwise the
     new spoken note is the expected, correct behavior.
 
-## v0.6.0 — Choices recap screen reads decisions + stats (DEPLOYED, PENDING IN-GAME TEST)
+## v0.6.0 — Choices recap screen reads decisions + stats (TESTED, working)
 
 User report: the end-of-episode / main-menu "Choices" recap screen read the whole
 screen top-to-bottom (WindowWatcher's generic net) instead of the decisions the
@@ -322,7 +320,7 @@ Fix — new ChoicesHandler.cs (polling, in AccessibilityWatcher after Backtalk):
     popup (m_majorChoiceMsg/m_minorChoiceMsg) — NOT touched here; still read by the
     generic net. Revisit if the user reports it too.
 
-## v0.5.0 — Choices hold the speech floor (DEPLOYED, PENDING IN-GAME TEST)
+## v0.5.0 — Choices hold the speech floor (TESTED, working)
 
 User report: backtalk challenge / choice text was being pre-empted by other text
 cues (in front of AND behind it). Backtalk choices are the highest-priority read —
@@ -483,8 +481,11 @@ NOTE: version scheme reset to single-digit minors climbing toward 1.0 (0.4, 0.5,
 
 ## Current phase
 
-v0.10.0 — localization + verbosity config + distribution packaging — PENDING IN-GAME TEST.
-Backtalk testing DEFERRED by user until they play past the tutorial.
+v0.9.0 released 2026-10-20 (GitHub). No pending in-game tests.
+Open items: Mac/Linux builds unverified (no Feral build to decompile); help text
+names mod keys by US symbol (non-US layouts unverified). Backtalk challenge
+announcements (start/points/win/loss/hurry) were deferred early on and never
+explicitly confirmed; choices during backtalk were tested in v0.5.0.
 
 ## Distribution
 
@@ -667,7 +668,7 @@ Backtalk testing DEFERRED by user until they play past the tutorial.
 - FocusHandler.cs: polled NGUI UICamera `T_D90B5C2A.hoveredObject`. FAILED in test:
   loaded clean, but keyboard menu navigation never touches NGUI hover in this game.
 
-## v0.3.1 changes (deployed, PENDING TEST)
+## v0.3.1 changes (tested, see v0.3.1 test results)
 
 - ROOT CAUSE of v0.3.0 silence: menus use the game's OWN focus system, not NGUI
   hover. Every menu owns a button list `T_51AF6A60` (field `m_buttons` on menu
@@ -740,7 +741,7 @@ different build (not installed). This mod targets the original only.
   - F1 help, backquote repeat-last, F9 debug logging toggle
 - Loc.cs English string table; TextUtil NGUI markup stripper; GameRefs typed accessors
 
-## Pending tests (need user with NVDA)
+## v0.1.0 test checklist (historical; all covered by later test rounds)
 
 Recommend pressing F9 (debug logging) at session start so the log captures [SR] lines.
 
