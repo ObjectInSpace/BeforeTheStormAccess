@@ -2,6 +2,14 @@
 
 Last updated: 2026-10-20
 
+## v1.0.0 — RELEASED (GitHub release v1.0.0, 2026-10-20)
+
+User asked to merge, push and release, bumping to 1.0. v1.0.0 = v0.9.2 content
+(Prism speech, all 9 languages, How to Play/tutorials incl. controller icons).
+Release assets: windows (tested), macos + linux (experimental, never run).
+How to Play / controller icon reading was released before its in-game test;
+still pending (see v0.9.1/v0.9.2 below).
+
 ## v0.9.2 — Controller icons in dynamic labels (BUILT, PENDING IN-GAME TEST)
 
 User request: cover controller glyphs too (v0.9.1 skipped them).
