@@ -75,15 +75,80 @@ namespace BeforeTheStormAccess
                     return Loc.Get("icon_new");
             }
 
+            // Keyboard first: "[P]", "[X]", "[PGUP]" are keys, not controller icons.
             KeyCode key;
             if (GameRefs.InlineKeyTokens().TryGetValue(token, out key))
                 return FocusHandler.PrettyKeyName(key);
 
-            // Controller button icons ([PAD], [XR2]...) have no translated names in
-            // the game; they're skipped rather than spoken as letter soup.
+            string padName = ControllerName(token);
+            if (padName != null)
+                return padName;
+
             if (_loggedUnknown.Add(token))
                 DebugLogger.Log(LogCategory.Handler, "KeyTokenText", "no spoken name for icon token " + token);
             return string.Empty;
+        }
+
+        /// <summary>
+        /// Controller icon tokens: "[P" (PlayStation) or "[X" (Xbox) plus a button
+        /// code (DawnUI's joystick token method; see docs\game-api.md). Labels printed
+        /// on the pads (L1, RB, A, Options, Start, Back) are spoken as printed, in
+        /// every language, like key letters. Shapes, sticks and the D-pad are
+        /// translated. Null when the token isn't a controller icon.
+        /// </summary>
+        private static string ControllerName(string token)
+        {
+            if (token.Length < 4 || (token[1] != 'P' && token[1] != 'X'))
+                return null;
+
+            if (token == "[XOLDSEL]")
+                return "Back"; // Xbox 360 Back, swapped in by the game's How to Play
+
+            bool playStation = token[1] == 'P';
+            eControlType pad = GameRefs.ControllerType;
+            switch (token.Substring(2, token.Length - 3))
+            {
+                case "L":
+                    return Loc.Get("pad_left_stick");
+                case "R":
+                    return Loc.Get("pad_right_stick");
+                case "L1":
+                    return playStation ? "L1" : "LB";
+                case "R1":
+                    return playStation ? "R1" : "RB";
+                case "L2":
+                    return playStation ? "L2" : "LT";
+                case "R2":
+                    return playStation ? "R2" : "RT";
+                case "AL":
+                    return playStation ? Loc.Get("pad_square") : "X";
+                case "AU":
+                    return playStation ? Loc.Get("pad_triangle") : "Y";
+                case "AR":
+                    return playStation ? Loc.Get("pad_circle") : "B";
+                case "AD":
+                    return playStation ? Loc.Get("pad_cross") : "A";
+                case "DPU":
+                    return Loc.Get("pad_dpad", Loc.Get("dir_up"));
+                case "DPR":
+                    return Loc.Get("pad_dpad", Loc.Get("dir_right"));
+                case "DPD":
+                    return Loc.Get("pad_dpad", Loc.Get("dir_down"));
+                case "DPL":
+                    return Loc.Get("pad_dpad", Loc.Get("dir_left"));
+                case "ST":
+                    if (playStation)
+                        return pad == eControlType.kPS3 ? "Start" : "Options";
+                    return pad == eControlType.kXbox360 ? "Start" : Loc.Get("pad_menu");
+                case "SEL":
+                    // PS4 reserves Share for the system, so the game's Select is the
+                    // touch pad there.
+                    if (playStation)
+                        return pad == eControlType.kPS3 ? "Select" : Loc.Get("pad_touchpad");
+                    return pad == eControlType.kXbox360 ? "Back" : Loc.Get("pad_view");
+            }
+
+            return null;
         }
     }
 }

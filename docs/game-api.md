@@ -30,6 +30,14 @@ accessor/alias in `GameRefs.cs`.
   `_18E0C5254(KeyCode)` has the same signature but returns sprite names
   ("BTN_Icon_W_"). Literal icons also appear: "[MOUSE]", "[PR]", "[CONSEQ]",
   "[NEW]". The mod reverses the KeyCode table via `GameRefs.InlineKeyTokens`.
+- Controller tokens: "[P" (PS3/PS4) or "[X" (Xbox 360/One) + code: ST, SEL,
+  DPU/DPR/DPL/DPD, L1, R1, L2, R2, AL/AU/AR/AD (Action1-4: Square/Triangle/
+  Circle/Cross on PS per sprites `PS3_square`..., X/Y/B/A on Xbox), L (L3 or left
+  stick), R (R3 or right stick). kPlatform returns a malformed "PLAT]" (unused).
+  How to Play swaps "[XSEL]" for "[XOLDSEL]" on non-Xbox-One pads. The pad
+  generation comes from `T_6FCAE66C.GetControlType()` → `eControlType`
+  (kPS4, kPS3, kXboxOne, kXbox360, kPC...). PS Start's sprite is
+  `Icon_Options`.
 
 ## Localization sheets
 

@@ -391,6 +391,20 @@ namespace BeforeTheStormAccess
             Add("key_mouse", "mouse");
             Add("icon_consequence", "consequence");
             Add("icon_new", "new");
+
+            // Controller icons in the same labels. Printed labels (L1, RB, A,
+            // Options, Start) stay as printed; these are the ones players name in
+            // their own language. pad_dpad's {0} is a dir_* word.
+            Add("pad_left_stick", "left stick");
+            Add("pad_right_stick", "right stick");
+            Add("pad_dpad", "D-pad {0}");
+            Add("pad_square", "Square");
+            Add("pad_triangle", "Triangle");
+            Add("pad_circle", "Circle");
+            Add("pad_cross", "Cross");
+            Add("pad_touchpad", "touch pad");
+            Add("pad_view", "View");
+            Add("pad_menu", "Menu");
         }
     }
 }

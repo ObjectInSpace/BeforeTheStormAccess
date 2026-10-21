@@ -2,6 +2,24 @@
 
 Last updated: 2026-10-20
 
+## v0.9.2 — Controller icons in dynamic labels (BUILT, PENDING IN-GAME TEST)
+
+User request: cover controller glyphs too (v0.9.1 skipped them).
+  - KeyTokenText.ControllerName: "[P..]"/"[X..]" tokens from DawnUI's joystick
+    token method. Sticks → pad_left_stick/pad_right_stick; D-pad → pad_dpad
+    "D-pad {0}" reusing dir_* words; PS face buttons → pad_square/triangle/
+    circle/cross (Action1-4 = left/up/right/down, confirmed from the PS3_*
+    sprite names); Xbox face buttons → X/Y/B/A; shoulders → L1/R1/L2/R2 or
+    LB/RB/LT/RT (printed labels, untranslated).
+  - Start/Select depend on the pad generation (GameRefs.ControllerType =
+    InputManager.GetControlType()): PS4 Options / touch pad (Share is reserved
+    by the system, so the game's Select is the touch pad); PS3 Start/Select;
+    Xbox One pad_menu / pad_view; Xbox 360 Start/Back; "[XOLDSEL]" = Back.
+  - Keyboard tokens are looked up first, so "[P]", "[X]", "[PGUP]" stay keys.
+  - 10 new mod keys, all translated (77 keys per file).
+Pending test: How to Play and a tutorial prompt with a controller connected
+(any pad), if available.
+
 ## v0.9.1 — How to Play + tutorial prompts read (BUILT, PENDING IN-GAME TEST)
 
 User report (2026-10-20): v0.9.0 tested and working (Prism, all tests, new

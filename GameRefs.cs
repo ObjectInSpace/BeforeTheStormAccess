@@ -141,6 +141,20 @@ namespace BeforeTheStormAccess
             return TextUtil.CleanLabel(text);
         }
 
+        /// <summary>
+        /// The connected controller family (PS4, PS3, Xbox One, Xbox 360), or kUnknown.
+        /// Controller icon tokens only say PlayStation or Xbox; this tells which
+        /// generation, e.g. whether Start is labelled Options, Start or Menu.
+        /// </summary>
+        public static eControlType ControllerType
+        {
+            get
+            {
+                T_6FCAE66C input = InputManager;
+                return input != null ? input.GetControlType() : eControlType.kUnknown;
+            }
+        }
+
         private static Dictionary<string, KeyCode> _inlineKeyTokens;
 
         /// <summary>
