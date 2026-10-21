@@ -45,3 +45,4 @@ foreach ($file in Get-ChildItem (Join-Path $projectDir "Translations") -Filter "
 }
 
 if ($failed) { exit 1 }
+exit 0

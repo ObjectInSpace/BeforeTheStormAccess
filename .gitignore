@@ -3,6 +3,9 @@ bin/
 obj/
 dist/
 
+# Prism binaries, fetched by scripts\Get-Prism.ps1 (pinned + hash-checked)
+native/
+
 # Decompiled game code — copyrighted, never commit
 decompiled/
 

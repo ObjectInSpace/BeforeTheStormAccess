@@ -1,7 +1,9 @@
 # Before the Storm Access
 
 Screen reader accessibility mod for Life is Strange: Before the Storm (original,
-Unity 5.5.3p1, GOG). BepInEx 5.4.23.5 plugin, net35, Tolk speech output.
+Unity 5.5.3p1, GOG). BepInEx 5.4.23.5 plugin, net35, Prism speech output
+(PrismSpeech.cs; fetch binaries with `scripts\Get-Prism.ps1`). Mac/Linux zips
+are experimental: never run, Feral build's class names unverified.
 
 ## User
 
@@ -32,7 +34,7 @@ and before session end.
 
 - Handler classes `[Feature]Handler`; private fields `_camelCase`; XML docs on
   public members; logs and comments in English.
-- Null-safety with logging — never fail silently. try/catch only around Tolk,
+- Null-safety with logging — never fail silently. try/catch only around native speech (Prism),
   reflection, and unstable game APIs.
 - Respect game keys: check `eGameInput` bindings before claiming a key; avoid
   the game's debug keys (kDebugDisplay, kSTDebugDisplay, kToggleFPSDisplay).

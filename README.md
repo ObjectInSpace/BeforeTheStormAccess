@@ -5,24 +5,68 @@ A screen reader accessibility mod for Life is Strange: Before the Storm
 choices, backtalk challenges, interactive objects, and provides walking
 navigation using the game's own pathfinding.
 
-Works with NVDA, JAWS, and other screen readers supported by Tolk. Falls
-back to the Windows SAPI voice when no screen reader is running.
+Speech and braille go through the Prism library, which supports NVDA, JAWS,
+Narrator, ZoomText, System Access, ZDSR, BoyPC Reader, PC-Talker and Sense
+Reader on Windows, VoiceOver on Mac, and Orca on Linux. When no screen reader
+is running, the mod uses the system voice, and it switches to your screen
+reader within a few seconds of you starting one.
 
 ## Requirements
 
-- Life is Strange: Before the Storm (original, Unity 5.5 build; GOG and Steam
-  should both work)
-- Windows, 64-bit
-- A screen reader (NVDA recommended), or the mod will use the Windows voice
+- Life is Strange: Before the Storm (original, Unity 5.5 build). Tested on the
+  GOG Windows version; Steam's Windows version should also work.
+- Windows 10 or later, 64-bit. Mac and Linux are experimental; see below.
+- A screen reader (NVDA recommended), or the mod will use the system voice.
 
-## Installation
+## Installation (Windows)
+
+Use the "-windows" zip.
 
 1. Extract this archive into the game's install folder (the folder containing
    "Life is Strange - Before the Storm.exe") so that the "BepInEx" folder,
-   "winhttp.dll", "doorstop_config.ini", "Tolk.dll", and
-   "nvdaControllerClient64.dll" all sit next to the game's exe.
+   "winhttp.dll" and "doorstop_config.ini" all sit next to the game's exe.
 2. Start the game. You should hear "Before the Storm Access loaded."
 3. Press F1 at any time for the key list.
+
+Upgrading from version 0.8 or earlier: "Tolk.dll" and
+"nvdaControllerClient64.dll" in the game folder are no longer used and can be
+deleted.
+
+## Mac and Linux (experimental, untested)
+
+The game's Mac and Linux versions are Feral Interactive's 2018 ports, sold on
+Steam. The mod has never been run on them. Its speech and loader parts are
+built for both systems. But the mod finds the game's menus, dialogue and
+objects by internal names that were only checked against the Windows version.
+If Feral's build uses different names, the mod may load and speak "Before the
+Storm Access loaded" but stay silent in the game. Reports are very welcome,
+with BepInEx/LogOutput.log attached.
+
+- Use the "-macos" or "-linux" zip. The Mac App Store version is sandboxed and
+  cannot load mods; use the Steam version.
+- Extract the zip into the game's folder: the one that contains the .app on
+  Mac, or the game's executable on Linux. In Steam, use Manage, Browse local
+  files.
+- Make the launcher executable: in a terminal in that folder, run
+  `chmod +x run_bepinex.sh`
+- Start the game through the launcher. The easiest way is a Steam launch
+  option (game Properties, Launch Options), with the real path to the folder:
+  `"/path/to/game/folder/run_bepinex.sh" %command%`
+  Alternatively, open run_bepinex.sh in a text editor, set
+  executable_name to the .app folder name (Mac) or the game's executable name
+  (Linux), and run it directly.
+- Mac only: macOS may block the downloaded libraries. In a terminal in the
+  game folder, run `xattr -dr com.apple.quarantine .` before the first start.
+  Speech goes through VoiceOver when it is on, otherwise through the system
+  voice. VoiceOver cannot be interrupted by the mod, so new announcements wait
+  for the current one to finish.
+- Linux only: the speech library needs glibmm 2.68 and libsigc++ 3. Install
+  them with your package manager: on Debian and Ubuntu, `libglibmm-2.68-1`
+  (named `libglibmm-2.68-1t64` on newer releases); on Fedora, `glibmm2.68`; on
+  Arch, `glibmm-2.68`. Speech goes through Orca, or through speech-dispatcher
+  if Orca isn't running.
+- Linux players running the Windows version through Proton should use the
+  "-windows" zip. That setup is untested too.
 
 ## Keys
 
@@ -81,8 +125,11 @@ translation file for missing keys or broken placeholders.
 
 ## Troubleshooting
 
-- No speech at all: check that Tolk.dll and nvdaControllerClient64.dll are in
-  the game folder, next to the exe.
+- No speech at all: open BepInEx\LogOutput.log and look for lines starting
+  with "Prism:". "speaking through" names the screen reader or voice in use.
+  "is missing" or "could not load" means the speech library (prism.dll on
+  Windows, libprism.dylib on Mac, libprism.so on Linux) isn't in
+  BepInEx\plugins or can't start; the line says why.
 - Game does not load the mod: check that winhttp.dll and doorstop_config.ini
   are in the game folder and that BepInEx\core exists.
 - Anything else: press F9 (debug logging), reproduce the issue, press F10,
@@ -90,13 +137,14 @@ translation file for missing keys or broken placeholders.
 
 ## Credits
 
-Built with BepInEx 5, HarmonyX, and Tolk.
+Built with BepInEx 5, HarmonyX, and Prism.
 
 ## License
 
 GPL-3.0. See LICENSE for the full text, and THIRD_PARTY_NOTICES.txt for the
-licenses of the bundled components (BepInEx, HarmonyX/MonoMod/Cecil, Tolk,
-NVDA controller client).
+licenses of the bundled components (BepInEx, HarmonyX/MonoMod/Cecil, Prism).
+Prism's own notice and license texts are in PRISM_NOTICE.txt and the
+PRISM_LICENSES folder.
 
 This mod is an unofficial, fan-made accessibility project. It is not affiliated
 with or endorsed by Deck Nine Games or Square Enix. It contains no game assets

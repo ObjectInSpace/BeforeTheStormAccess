@@ -52,7 +52,9 @@
   <Target Name="CopyToPlugins" AfterTargets="Build" Condition="'$(SkipCopyToPlugins)' != 'true'">
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(GameDir)\BepInEx\plugins\" />
     <Copy SourceFiles="@(TranslationFile)" DestinationFolder="$(GameDir)\BepInEx\plugins\" />
-    <Message Text="Copied $(TargetFileName) and translation files to BepInEx plugins folder" Importance="High" />
+    <Copy SourceFiles="native\win-x64\prism.dll" DestinationFolder="$(GameDir)\BepInEx\plugins\" Condition="Exists('native\win-x64\prism.dll')" />
+    <Warning Text="native\win-x64\prism.dll missing: run scripts\Get-Prism.ps1, or the mod will be silent." Condition="!Exists('native\win-x64\prism.dll')" />
+    <Message Text="Copied $(TargetFileName), translations and Prism to BepInEx plugins folder" Importance="High" />
   </Target>
 
 </Project>

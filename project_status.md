@@ -2,7 +2,57 @@
 
 Last updated: 2026-10-20
 
-## v0.8.0 — Localization pass, all 9 game languages (BUILT, PENDING IN-GAME TEST)
+## v0.9.0 — Prism speech + Mac/Linux packages (BUILT, PENDING IN-GAME TEST)
+
+Decisions (user, 2026-10-20): replace Tolk with Prism (ethindp/prism, MPL-2.0)
+rather than UnityAccessibilityLib, whose speech manager is a subset of
+ScreenReader.cs and which brings no new screen readers. Prism adds VoiceOver
+(Mac), Orca/speech-dispatcher (Linux), and Windows readers matching the new
+languages (PC-Talker JA; ZDSR, BoyPC ZH; Sense Reader KO), plus Narrator and
+OneCore. Stay on BepInEx 5.4.23.5 (it already ships Mac/Linux; v6 is still a
+pre-release; MelonLoader gains nothing). Ship windows/macos/linux zips.
+
+Mechanism (PrismSpeech.cs):
+  - Prismatoid (.NET bindings) needs net8, so the mod binds the C API itself.
+    The library is loaded by ABSOLUTE PATH from the plugin folder
+    (LoadLibraryW / dlopen via libdl.so.2 or /usr/lib/libSystem.dylib), and
+    every export is bound through GetDelegateForFunctionPointer. No reliance
+    on Mono's per-platform DllImport search.
+  - prism_init(NULL) (no config struct marshalling), then
+    prism_registry_create_best. Strings are UTF-8 byte[] with a trailing NUL;
+    bools are I1.
+  - Output failure → re-select best backend, retry once. On a TTS fallback
+    (SAPI/OneCore/AVSpeech/speechd), probe higher-priority backends every 5s
+    (IS_SUPPORTED_AT_RUNTIME check before initialize) so a screen reader
+    started after the game takes over, as with Tolk.
+  - ScreenReader.cs logic is unchanged; stop-before-interrupt is kept for NVDA
+    sleep mode.
+  - Binaries: scripts\Get-Prism.ps1 fetches v0.18.3 (SHA-256 pinned) into
+    native\ (gitignored). The build copies prism.dll to plugins.
+    Package-Mod.ps1 makes 3 zips; Mac/Linux are based on the official BepInEx
+    zips (hash pinned) and ship Prism NOTICE + LICENSES.
+  - Facts: prism.dll needs only system DLLs. libprism.dylib is universal.
+    libprism.so NEEDS glibmm/giomm 2.68 + sigc 3 (in the README). Windows 10+.
+    Mac VoiceOver can't stop/interrupt.
+
+NOT VERIFIED — Feral Mac/Linux build: the user owns the game on GOG, which
+sells Windows only, so there is no Mac build to decompile. Whether Feral's
+Assembly-CSharp keeps the same T_ names is unknown. The README marks Mac/Linux
+experimental. If a build becomes available, decompile into a gitignored
+decompiled-mac\ and diff the T_ names used in GameRefs.cs and across the mod.
+
+Pending tests (Windows, NVDA):
+  1. Log: "Prism: loaded ...prism.dll", "Prism: speaking through NVDA."
+  2. Normal play: subtitles, choices, menus, repeat key; braille if available.
+  3. NVDA sleep mode: interrupting announcements still cut off.
+  4. Start with NVDA off → system voice; start NVDA → "switched to NVDA"
+     within ~5s.
+  5. Quit NVDA mid-game → "output failed; re-selecting", then system voice.
+  6. No BepInEx error about prism.dll sitting in plugins (a debug-level skip
+     is fine).
+Old Tolk.dll / nvdaControllerClient64.dll remain in the game root, unused.
+
+## v0.8.0 — Localization pass, all 9 game languages (DEPLOYED, merged to master)
 
 Context: PR #1 (MattrimCotton) added a French file. Merged locally on branch
 localization-pass (contributor commit kept), then a full localization pass on top.
@@ -603,7 +653,8 @@ Backtalk testing DEFERRED by user until they play past the tutorial.
 - Unity 5.5.3p1, 64-bit, legacy Mono (CLR 3.0.40818.0 reported by BepInEx)
 - Mod loader: BepInEx 5.4.23.5 (copied from the Date Everything install) — VERIFIED WORKING on this Unity 5.5 build (log shows chainloader complete, plugin loaded, NVDA detected)
 - Mod target framework: net35 (the old Mono cannot load net472 assemblies)
-- Tolk.dll + nvdaControllerClient64.dll installed in the game root
+- Speech: Prism prism.dll in BepInEx\plugins (since v0.9.0). The old Tolk.dll and
+  nvdaControllerClient64.dll in the game root are unused leftovers.
 - Project: `C:\Users\amock\Before The Storm Access\BeforeTheStormAccess.csproj`
 - Build: `dotnet build -c Release` (auto-copies DLL to BepInEx\plugins)
 - Decompiled game code: `decompiled\` (ilspycmd output of Assembly-CSharp.dll)

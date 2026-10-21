@@ -1,55 +1,17 @@
 using System;
-using System.Runtime.InteropServices;
 
 namespace BeforeTheStormAccess
 {
     /// <summary>
-    /// Minimal Tolk wrapper for screen reader announcements.
+    /// Screen reader announcements: duplicate suppression, coalesced interrupts and
+    /// repeat-last on top of the Prism speech backend (PrismSpeech).
     /// Ported from Date Everything Access; net35-safe.
     /// </summary>
     public static class ScreenReader
     {
         private static readonly object _speechLock = new object();
 
-        [DllImport("Tolk.dll")]
-        private static extern void Tolk_Load();
-
-        [DllImport("Tolk.dll")]
-        private static extern void Tolk_Unload();
-
-        [DllImport("Tolk.dll")]
-        private static extern bool Tolk_IsLoaded();
-
-        [DllImport("Tolk.dll")]
-        private static extern bool Tolk_HasSpeech();
-
-        [DllImport("Tolk.dll", CharSet = CharSet.Unicode)]
-        private static extern bool Tolk_Output(string text, bool interrupt);
-
-        [DllImport("Tolk.dll")]
-        private static extern bool Tolk_Silence();
-
-        [DllImport("Tolk.dll", CharSet = CharSet.Unicode)]
-        private static extern IntPtr Tolk_DetectScreenReader();
-
-        // Enables Tolk's built-in Windows SAPI driver as a fallback voice. Must be called
-        // BEFORE Tolk_Load() to take effect. When no screen reader is running, SAPI lets the
-        // mod still speak aloud through the OS voice instead of going silent.
-        [DllImport("Tolk.dll")]
-        private static extern bool Tolk_TrySAPI(bool trySAPI);
-
         private static bool _available;
-        private static bool _usingSapiFallback;
-
-        /// <summary>
-        /// True when Tolk has speech but no live screen reader is running, i.e. output is
-        /// going through the built-in SAPI voice fallback.
-        /// </summary>
-        public static bool IsUsingSapiFallback
-        {
-            get { return _usingSapiFallback; }
-        }
-
         private static bool _initialized;
         private static string _lastSpokenText;
         private static string _lastRepeatableText;
@@ -70,59 +32,23 @@ namespace BeforeTheStormAccess
         private static bool _coalescedInterruptPending;
 
         /// <summary>
-        /// Loads Tolk and detects the active screen reader.
+        /// Loads Prism and selects the running screen reader, or the OS voice when none
+        /// is running. Prism logs which backend it picked.
         /// </summary>
         public static void Initialize()
         {
             if (_initialized)
                 return;
 
-            try
-            {
-                // Enable the SAPI fallback BEFORE loading so Tolk can speak through the OS
-                // voice when no screen reader is running. Tolk still prefers a live screen
-                // reader when one is present.
-                Tolk_TrySAPI(true);
-
-                Tolk_Load();
-                _available = Tolk_IsLoaded() && Tolk_HasSpeech();
-
-                if (_available)
-                {
-                    IntPtr srNamePtr = Tolk_DetectScreenReader();
-                    if (srNamePtr != IntPtr.Zero)
-                    {
-                        string srName = Marshal.PtrToStringUni(srNamePtr);
-                        Main.Log.LogInfo("Screen reader detected: " + srName);
-                    }
-                    else
-                    {
-                        // No screen reader, but Tolk still has speech — that's the SAPI voice.
-                        _usingSapiFallback = true;
-                        Main.Log.LogInfo("No screen reader detected; using SAPI voice fallback.");
-                    }
-                }
-                else
-                {
-                    Main.Log.LogWarning("No screen reader detected and no SAPI voice available; Tolk output disabled.");
-                }
-            }
-            catch (DllNotFoundException)
-            {
-                Main.Log.LogError("Tolk.dll or nvdaControllerClient64.dll is missing from the game directory.");
-                _available = false;
-            }
-            catch (Exception ex)
-            {
-                Main.Log.LogError("Failed to initialize Tolk: " + ex.Message);
-                _available = false;
-            }
+            _available = PrismSpeech.Initialize();
+            if (!_available)
+                Main.Log.LogWarning("Speech output disabled; announcements are only logged.");
 
             _initialized = true;
         }
 
         /// <summary>
-        /// Speaks text through Tolk and optionally remembers it for replay.
+        /// Speaks text through the screen reader and optionally remembers it for replay.
         /// </summary>
         public static void Say(string text, bool interrupt = true, bool remember = true, bool rememberAsRepeatable = false)
         {
@@ -197,12 +123,12 @@ namespace BeforeTheStormAccess
         }
 
         /// <summary>
-        /// Sends text to Tolk, issuing an explicit silence first when interrupting.
+        /// Sends text to Prism, issuing an explicit stop first when interrupting.
         ///
-        /// Tolk's own interrupt flag (Tolk_Output(text, true)) bundles a cancel + speak, but with
-        /// NVDA in SLEEP MODE that bundled cancel does not clear NVDA's speech queue. Calling
-        /// Tolk_Silence() as a separate, ordered call before the output reliably flushes the queue
-        /// first. Harmless when NVDA is awake.
+        /// With Tolk, the bundled cancel in an interrupting output did not clear NVDA's
+        /// speech queue while NVDA was in SLEEP MODE; a separate, ordered stop before the
+        /// output did. Kept for Prism's NVDA backend, which uses the same controller
+        /// client. Harmless when NVDA is awake.
         /// </summary>
         private static void Output(string text, bool interrupt)
         {
@@ -210,7 +136,7 @@ namespace BeforeTheStormAccess
             {
                 try
                 {
-                    Tolk_Silence();
+                    PrismSpeech.Stop();
                 }
                 catch
                 {
@@ -218,7 +144,7 @@ namespace BeforeTheStormAccess
                 }
             }
 
-            Tolk_Output(text, interrupt);
+            PrismSpeech.Output(text, interrupt);
         }
 
         /// <summary>
@@ -270,28 +196,23 @@ namespace BeforeTheStormAccess
 
             try
             {
-                Tolk_Silence();
+                PrismSpeech.Stop();
             }
-            catch
+            catch (Exception ex)
             {
+                Main.Log.LogWarning("ScreenReader.Stop failed: " + ex.Message);
             }
         }
 
         /// <summary>
-        /// Unloads Tolk and clears cached speech state.
+        /// Releases the speech backend and clears cached speech state.
         /// </summary>
         public static void Shutdown()
         {
             if (!_initialized)
                 return;
 
-            try
-            {
-                Tolk_Unload();
-            }
-            catch
-            {
-            }
+            PrismSpeech.Shutdown();
 
             _initialized = false;
             _available = false;
