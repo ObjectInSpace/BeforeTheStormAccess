@@ -26,6 +26,12 @@ New-Item -ItemType Directory -Force (Join-Path $projectDir "dist") | Out-Null
 # Mod DLL
 Copy-Item (Join-Path $projectDir "bin\Release\net35\BeforeTheStormAccess.dll") (Join-Path $staging "BepInEx\plugins\")
 
+# Translations
+$translationsDir = Join-Path $projectDir "Translations"
+if (Test-Path $translationsDir) {
+    Copy-Item (Join-Path $translationsDir "*.txt") (Join-Path $staging "BepInEx\plugins\")
+}
+
 # Loader: BepInEx core + doorstop from the working install
 Copy-Item (Join-Path $gameDir "BepInEx\core\*") (Join-Path $staging "BepInEx\core\")
 Copy-Item (Join-Path $gameDir "winhttp.dll") $staging
