@@ -44,7 +44,13 @@ Known, not investigated: the help text names mod keys by US symbol (brackets,
 backslash, grave). How Unity 5.5 maps those KeyCodes on AZERTY/QWERTZ layouts is
 unverified; a French/German keyboard user may need different keys.
 
-## v0.7.0 — SMS live-order + burner phone + journal page order (DEPLOYED, PENDING IN-GAME TEST)
+## v0.4.0 - v0.7.0 test results (user, 2026-10-20)
+
+All pending in-game tests passed ("They went great"): SMS live order, burner
+phone, journal page order, interact on-screen gate, choices recap + absent-stats
+note, choices holding the speech floor.
+
+## v0.7.0 — SMS live-order + burner phone + journal page order (TESTED, working)
 
 User report (2026-07-16), four related issues:
   1. Burner phone contacts/messages screen only said "contacts"/"messages" (window
