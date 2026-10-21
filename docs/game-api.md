@@ -14,6 +14,23 @@ accessor/alias in `GameRefs.cs`.
 - Localization: NGUI Localization clone `T_A7F32A9D`, `Get(key)` / `Get(key, sheet)`.
 - Text assets: `StreamingAssets\Localization\`.
 
+## Dynamic labels and inline key icons
+
+- `T_5D6C057E` "Idol Dynamic Label" (NGUI label variant, base `T_73BC0C17`
+  UIWidget like `T_A243E23D`): `text` holds inline icon tokens rendered as
+  sprites. Used by HowToPlayWindow `T_CF3FA5DC.m_pageText[]` (pages toggled via
+  `m_pages[]`, text built in a private method from `HOWTOPLAY_UI_*` keys with
+  `[BUTTONn]` replaced), tutorial prompts `T_C811E0CD.m_uiButtonLabel`,
+  UserInformWindow `T_859A152B.m_displayLabel`, and the brightness/scaling
+  panels `T_250946AC` / `T_32770A6A` (`m_directions`, `m_applyIconLabel`).
+- Tokens come from DawnUI `T_408CFC35.GetInlineString(eGameInput)` → private
+  `_14F5CA5B(KeyCode)` ("[W]", "[LSHIFT]", "[MOUSEL]", "[B/]", "[`]"...),
+  `_14F5CA5B(eMouseInput)` ("[MOUSEL]"/"[MOUSER]"/"[SCROLL]", other "[MOUSE]"),
+  `_14F5CA5B(eJoystickKey, eControlType)` ("[P..]"/"[X..]" controller icons).
+  `_18E0C5254(KeyCode)` has the same signature but returns sprite names
+  ("BTN_Icon_W_"). Literal icons also appear: "[MOUSE]", "[PR]", "[CONSEQ]",
+  "[NEW]". The mod reverses the KeyCode table via `GameRefs.InlineKeyTokens`.
+
 ## Localization sheets
 
 - Layout: `StreamingAssets\Localization\{LANG}\{sheet}.lsb`, LANG = EN, DE, ES,

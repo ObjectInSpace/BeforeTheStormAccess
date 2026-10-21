@@ -66,3 +66,6 @@ slider_percent={0}%
 press_key_to_bind=pressione uma tecla para atribuir
 key_unbound=não atribuída
 key_grave=acento grave
+key_mouse=mouse
+icon_consequence=consequência
+icon_new=novo

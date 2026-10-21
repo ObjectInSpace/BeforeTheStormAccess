@@ -149,6 +149,18 @@ namespace BeforeTheStormAccess
                         Main.Log.LogInfo("  label path=" + GetPath(label.transform, w.transform)
                             + " alpha=" + label.alpha.ToString("0.00") + " text='" + text + "'");
                     }
+
+                    T_5D6C057E[] dynamicLabels = w.GetComponentsInChildren<T_5D6C057E>(false);
+                    for (int j = 0; j < dynamicLabels.Length; j++)
+                    {
+                        T_5D6C057E label = dynamicLabels[j];
+                        if (label == null || string.IsNullOrEmpty(label.text))
+                            continue;
+
+                        Main.Log.LogInfo("  dynamic label path=" + GetPath(label.transform, w.transform)
+                            + " alpha=" + label.alpha.ToString("0.00") + " raw='" + label.text
+                            + "' spoken='" + TextUtil.CleanLabel(KeyTokenText.ToSpeech(label.text)) + "'");
+                    }
                 }
             }
 
@@ -367,40 +379,18 @@ namespace BeforeTheStormAccess
             for (int i = 0; i < labels.Length; i++)
             {
                 T_A243E23D label = labels[i];
-                if (label == null || label.alpha <= 0.01f)
+                if (label == null)
                     continue;
 
-                string text = TextUtil.CleanLabel(label.text);
-                if (text.Length == 0)
+                LabelEntry entry;
+                if (!TryMakeEntry(window, label, label.text, out entry))
                     continue;
-
-                // SMS message rows (T_AD5CB3F7) are read by SmsPatches, which speaks
-                // only the unread portion of a thread. Skip their labels here so the
-                // journal's SMS tab isn't also read in full by this generic net.
-                if (label.GetComponentInParent<T_AD5CB3F7>() != null)
-                    continue;
-
-                // The global options bar (T_1FBA79F9) holds persistent action prompts
-                // (Select / Back / Exit). It re-enters the visible set on every page
-                // and, spoken as "new" content, interrupts whatever is being read
-                // (e.g. the SMS thread). Focused buttons are narrated by FocusHandler.
-                if (label.GetComponentInParent<T_1FBA79F9>() != null)
-                    continue;
-
-                LabelEntry entry = new LabelEntry();
-                entry.Path = GetPath(label.transform, window.transform);
-                entry.Text = text;
-                entry.Position = label.transform.position;
-
-                T_9E2FDFCF owningButton = label.GetComponentInParent<T_9E2FDFCF>();
-                entry.OwnedByListButton = owningButton != null && owningButton.m_menu != null;
 
                 // Journal pages fill their m_labels array in narrative order, and that
                 // order does NOT always match screen layout — choice-dependent rows get
                 // inserted at positions that read out of sequence under a pure top-to-
                 // bottom sort. Anchor page labels to their authored array index so each
                 // page reads in the order it was written.
-                entry.PageOrder = -1;
                 T_32AFC3D1 page = label.GetComponentInParent<T_32AFC3D1>();
                 if (page != null && page.m_labels != null)
                 {
@@ -418,11 +408,63 @@ namespace BeforeTheStormAccess
                 result.Add(entry);
             }
 
+            // Dynamic labels (How to Play pages, tutorial prompts, the brightness
+            // screen's directions) are a separate label class whose text carries
+            // inline key-icon tokens; KeyTokenText turns those into key names.
+            T_5D6C057E[] dynamicLabels = window.GetComponentsInChildren<T_5D6C057E>(false);
+            for (int i = 0; i < dynamicLabels.Length; i++)
+            {
+                T_5D6C057E label = dynamicLabels[i];
+                if (label == null)
+                    continue;
+
+                LabelEntry entry;
+                if (TryMakeEntry(window, label, KeyTokenText.ToSpeech(label.text), out entry))
+                    result.Add(entry);
+            }
+
             // Reading order: journal page rows keep their authored array order (grouped
             // per page, pages top to bottom); everything else is top to bottom, then
             // left to right (NGUI y grows upward).
             result.Sort(CompareForReading);
             return result;
+        }
+
+        /// <summary>
+        /// Builds the entry for one visible label of either label class, or returns
+        /// false when it is hidden, empty, or owned by a dedicated reader.
+        /// </summary>
+        private static bool TryMakeEntry(T_D25B278 window, T_73BC0C17 widget, string rawText, out LabelEntry entry)
+        {
+            entry = new LabelEntry();
+            if (widget.alpha <= 0.01f)
+                return false;
+
+            string text = TextUtil.CleanLabel(rawText);
+            if (text.Length == 0)
+                return false;
+
+            // SMS message rows (T_AD5CB3F7) are read by SmsPatches, which speaks
+            // only the unread portion of a thread. Skip their labels here so the
+            // journal's SMS tab isn't also read in full by this generic net.
+            if (widget.GetComponentInParent<T_AD5CB3F7>() != null)
+                return false;
+
+            // The global options bar (T_1FBA79F9) holds persistent action prompts
+            // (Select / Back / Exit). It re-enters the visible set on every page
+            // and, spoken as "new" content, interrupts whatever is being read
+            // (e.g. the SMS thread). Focused buttons are narrated by FocusHandler.
+            if (widget.GetComponentInParent<T_1FBA79F9>() != null)
+                return false;
+
+            entry.Path = GetPath(widget.transform, window.transform);
+            entry.Text = text;
+            entry.Position = widget.transform.position;
+            entry.PageOrder = -1;
+
+            T_9E2FDFCF owningButton = widget.GetComponentInParent<T_9E2FDFCF>();
+            entry.OwnedByListButton = owningButton != null && owningButton.m_menu != null;
+            return true;
         }
 
         private static int CompareForReading(LabelEntry a, LabelEntry b)

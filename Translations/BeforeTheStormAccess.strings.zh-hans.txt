@@ -66,3 +66,6 @@ slider_percent={0}%
 press_key_to_bind=请按下要绑定的键
 key_unbound=未绑定
 key_grave=重音符
+key_mouse=鼠标
+icon_consequence=后果
+icon_new=新

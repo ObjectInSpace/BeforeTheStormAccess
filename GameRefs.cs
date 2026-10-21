@@ -24,6 +24,9 @@
 //   T_C3DD66D9  PlayerController   m_navAgent (NavMeshAgent!), s_mainCharacterMesh
 //   T_884A92DB  FollowCamera       m_isInteractionBlocked, Halt()
 //   T_A243E23D  UILabel (NGUI)     text, textKey, processedText
+//   T_5D6C057E  DynamicLabel       "Idol Dynamic Label": text with inline key-icon
+//                                  tokens ([W], [LSHIFT]); How to Play, tutorials
+//   T_73BC0C17  UIWidget           common base of both labels (alpha)
 //   T_A7F32A9D  Localization(NGUI) static Get(key), Get(key, sheet), s_useLocalization
 //   T_D90B5C2A  UICamera (NGUI)    Notify(go, "OnHover", bool), IsHighlighted(go)
 //   T_9E2FDFCF  UIButtonBase       virtual OnHover(bool)
@@ -48,6 +51,10 @@
 // C# using-aliases are per-file, so shared access goes through this helper
 // class instead: strongly typed accessors with null-safety, one place to fix
 // when a mapping is wrong.
+
+using System.Collections.Generic;
+using System.Reflection;
+using UnityEngine;
 
 namespace BeforeTheStormAccess
 {
@@ -132,6 +139,61 @@ namespace BeforeTheStormAccess
                 return string.Empty;
 
             return TextUtil.CleanLabel(text);
+        }
+
+        private static Dictionary<string, KeyCode> _inlineKeyTokens;
+
+        /// <summary>
+        /// The game's inline key tokens ("[W]", "[LSHIFT]", "[MOUSEL]", "[B/]") mapped
+        /// back to the key each stands for. Dynamic labels (T_5D6C057E) render these
+        /// tokens as key icons, so their raw text has no readable key names. Built once
+        /// by running DawnUI's own private KeyCode-to-token method over every KeyCode.
+        /// That method's name is obfuscated, so it's found by signature (non-public
+        /// static string(KeyCode)) plus its output for W; the sibling with the same
+        /// signature returns sprite names instead. Empty (logged) if not found.
+        /// </summary>
+        public static Dictionary<string, KeyCode> InlineKeyTokens()
+        {
+            if (_inlineKeyTokens != null)
+                return _inlineKeyTokens;
+
+            _inlineKeyTokens = new Dictionary<string, KeyCode>();
+            try
+            {
+                MethodInfo tokenMethod = null;
+                MethodInfo[] methods = typeof(T_408CFC35).GetMethods(BindingFlags.NonPublic | BindingFlags.Static);
+                for (int i = 0; i < methods.Length && tokenMethod == null; i++)
+                {
+                    ParameterInfo[] parameters = methods[i].GetParameters();
+                    if (methods[i].ReturnType != typeof(string) || parameters.Length != 1
+                        || parameters[0].ParameterType != typeof(KeyCode))
+                        continue;
+
+                    if ((string)methods[i].Invoke(null, new object[] { KeyCode.W }) == "[W]")
+                        tokenMethod = methods[i];
+                }
+
+                if (tokenMethod == null)
+                {
+                    Main.Log.LogWarning("InlineKeyTokens: DawnUI key-token method not found; key icons will be skipped.");
+                    return _inlineKeyTokens;
+                }
+
+                foreach (KeyCode key in System.Enum.GetValues(typeof(KeyCode)))
+                {
+                    string token = (string)tokenMethod.Invoke(null, new object[] { key });
+                    if (!string.IsNullOrEmpty(token) && token.StartsWith("[") && !_inlineKeyTokens.ContainsKey(token))
+                        _inlineKeyTokens[token] = key;
+                }
+
+                Main.Log.LogInfo("InlineKeyTokens: mapped " + _inlineKeyTokens.Count + " key tokens.");
+            }
+            catch (System.Exception ex)
+            {
+                Main.Log.LogWarning("InlineKeyTokens: reflection failed: " + ex.Message);
+            }
+
+            return _inlineKeyTokens;
         }
 
         /// <summary>Fetches a UI window by its registered name, or null when unavailable.</summary>

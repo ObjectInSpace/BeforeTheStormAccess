@@ -66,3 +66,6 @@ slider_percent={0}%
 press_key_to_bind=割り当てるキーを押してください
 key_unbound=未割り当て
 key_grave=グレイヴ・アクセント
+key_mouse=マウス
+icon_consequence=影響
+icon_new=新着

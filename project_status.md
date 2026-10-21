@@ -2,7 +2,38 @@
 
 Last updated: 2026-10-20
 
-## v0.9.0 — Prism speech + Mac/Linux packages (BUILT, PENDING IN-GAME TEST)
+## v0.9.1 — How to Play + tutorial prompts read (BUILT, PENDING IN-GAME TEST)
+
+User report (2026-10-20): v0.9.0 tested and working (Prism, all tests, new
+translations). But the "How to Play" text isn't read.
+
+Root cause: How to Play pages (T_CF3FA5DC.m_pageText) are NOT UILabels
+(T_A243E23D) but the game's "Idol Dynamic Label" (T_5D6C057E, also a
+T_73BC0C17 widget), which WindowWatcher never collected. The same class
+carries tutorial prompts (T_C811E0CD.m_uiButtonLabel in TutorialWindow),
+UserInformWindow's m_displayLabel and the brightness/scaling directions, so
+those were silent too. Its text holds inline key-icon tokens ("Use
+[W][A][S][D] to move", "[LSHIFT]", "[MOUSEL]", "[B/]").
+
+Fix:
+  - WindowWatcher.CollectVisibleLabels also collects T_5D6C057E (shared
+    TryMakeEntry for both label classes); the F10 dump lists them with raw +
+    spoken text.
+  - KeyTokenText.ToSpeech: token runs → localized key names joined by ", "
+    (FocusHandler.PrettyKeyName). "[MOUSE]"/"[CONSEQ]"/"[NEW]" → new mod
+    strings key_mouse / icon_consequence / icon_new (all 8 translations). NGUI
+    markup tokens are left for CleanLabel. Leading "-" bullets are dropped.
+    Controller tokens ([PAD], [XR2]) have no game names and are skipped.
+  - GameRefs.InlineKeyTokens(): token→KeyCode table built by reflection over
+    DawnUI's private KeyCode→token method (obfuscated name; found by signature
+    string(KeyCode) + output "[W]" for W, since a sprite-name sibling shares the
+    signature).
+  - Simulated offline on the EN/FR How to Play text: "Use W, A, S, D to move.
+    Use mouse to move the camera. Hold Left Shift to move faster..."
+Pending test: open How to Play (pause menu), flip pages with left/right; check
+tutorial prompts in a new game; press F10 on How to Play if anything reads oddly.
+
+## v0.9.0 — Prism speech + Mac/Linux packages (TESTED, working per user 2026-10-20)
 
 Decisions (user, 2026-10-20): replace Tolk with Prism (ethindp/prism, MPL-2.0)
 rather than UnityAccessibilityLib, whose speech manager is a subset of

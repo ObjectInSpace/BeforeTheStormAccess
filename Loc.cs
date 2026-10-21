@@ -383,6 +383,14 @@ namespace BeforeTheStormAccess
             // that screen readers often skip.
             Add("key_unbound", "unbound");
             Add("key_grave", "grave accent");
+
+            // Icons inside the game's dynamic labels (How to Play, tutorials) that
+            // aren't keys (KeyTokenText). "[MOUSE]" = mouse movement; "[CONSEQ]" =
+            // the consequence icon ("[CONSEQ] icon means your action will have
+            // consequences"); "[NEW]" = the journal's new-entry marker.
+            Add("key_mouse", "mouse");
+            Add("icon_consequence", "consequence");
+            Add("icon_new", "new");
         }
     }
 }

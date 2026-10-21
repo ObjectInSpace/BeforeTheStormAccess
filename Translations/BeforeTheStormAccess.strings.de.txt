@@ -66,3 +66,6 @@ slider_percent={0} %
 press_key_to_bind=drücke eine Taste zum Zuweisen
 key_unbound=nicht belegt
 key_grave=Gravis
+key_mouse=Maus
+icon_consequence=Konsequenz
+icon_new=neu
