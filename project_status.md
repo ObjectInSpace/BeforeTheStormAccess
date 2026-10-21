@@ -1,6 +1,48 @@
 # Before the Storm Access - Project Status
 
-Last updated: 2026-07-16
+Last updated: 2026-10-20
+
+## v0.8.0 — Localization pass, all 9 game languages (BUILT, PENDING IN-GAME TEST)
+
+Context: PR #1 (MattrimCotton) added a French file. Merged locally on branch
+localization-pass (contributor commit kept), then a full localization pass on top.
+Not yet pushed — needs user OK.
+
+Audit result: all speech already went through Loc.Get, but three paths leaked
+English made from code identifiers: window names (GameObject names), key names
+(KeyCode enum), decimal formatting (always "2.5").
+
+Structure (fewer mod strings, game terminology):
+  - Decoded the game's .lsb sheets (XOR format, see docs\game-api.md
+    "Localization sheets"; scripts\dump_game_strings.py). 4,540 keys x 9 languages.
+  - GameRefs.GameText(key): game translation, "" when missing or "[PH-xx]"
+    placeholder. Loc.Game(key, englishFallback) logs once per missing key.
+  - From the game now: Backtalk/Choices headings, "Your Choices" recap title,
+    all key names (mirrors the keybinding row's table), window titles (Pause,
+    Settings, Journal, Episodes, Extras, Credits, How to Play, Map, Mixtape Mode,
+    Loading). Windows with no game title are announced by content only (was
+    "Tutorial window." etc.); main menu keeps mod string window_main_menu.
+  - Percent strings are "{0}%" (screen reader speaks % in its language).
+  - Decimals use the language's culture (Loc.FormatNumber; fr "2,5").
+  - Removed keys: backtalk_prefix, choices_prefix, choices_recap_prefix,
+    key_unknown, key_left/right/middle_mouse. Added: heading, window_main_menu.
+  - Key game finding: official FR Backtalk is "Insolence" — the PR's
+    "Joute verbale" was replaced; every translation uses the game's own terms.
+
+Translations: Translations\*.txt for fr, de, es, es-mx, it, pt, ja, zh-hans
+(64 keys each). Build copies them to BepInEx\plugins; Package-Mod.ps1 (from the
+PR) ships them. scripts\Check-Translations.ps1 validates keys + placeholders.
+
+Pending tests:
+  1. English: choices read "Choices: ...", backtalk "Backtalk: ...", recap
+     starts "Your Choices.", key names in settings, window titles.
+  2. Switch Text language to French (or any): mod speech follows live; log
+     shows "Loc: loaded 64 strings for 'fr'"; distances say "2,5".
+  3. Log has no "Loc: game has no ... text for" warnings.
+
+Known, not investigated: the help text names mod keys by US symbol (brackets,
+backslash, grave). How Unity 5.5 maps those KeyCodes on AZERTY/QWERTZ layouts is
+unverified; a French/German keyboard user may need different keys.
 
 ## v0.7.0 — SMS live-order + burner phone + journal page order (DEPLOYED, PENDING IN-GAME TEST)
 

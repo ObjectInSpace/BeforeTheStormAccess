@@ -183,7 +183,9 @@ namespace BeforeTheStormAccess
             StringBuilder builder = new StringBuilder();
             if (ModConfig.AnnounceWindowNames.Value)
             {
-                builder.Append(Loc.Get("window_opened", PrettyWindowName(name)));
+                string title = WindowTitle(name);
+                if (title.Length > 0)
+                    builder.Append(Loc.Get("window_opened", title));
             }
 
             List<LabelEntry> labels = CollectVisibleLabels(window);
@@ -464,25 +466,42 @@ namespace BeforeTheStormAccess
             return builder.ToString();
         }
 
-        private static string PrettyWindowName(string rawName)
+        /// <summary>
+        /// Window name -> the game's own localization key for its title, so window
+        /// names are spoken in the game's language with its official wording.
+        /// </summary>
+        private static readonly Dictionary<string, string> _windowTitleKeys = new Dictionary<string, string>
         {
-            string name = rawName;
-            if (name.EndsWith("Window"))
-            {
-                name = name.Substring(0, name.Length - "Window".Length);
-            }
+            { "PauseWindow", "SETTINGS_UI_KEYBIND_PAUSE" },
+            { "SettingsWindow", "MAINMENU_UI_SETTINGS" },
+            { "DarkSettingsWindow", "MAINMENU_UI_SETTINGS" },
+            { "JournalWindow", "GLOBAL_CODE_JOURNAL" },
+            { "SceneSelectionWindow", "MAINMENU_UI_EPISODES" },
+            { "ExtrasWindow", "MAINMENU_UI_EXTRAS" },
+            { "CreditsWindow", "EXTRAS_UI_CREDITS" },
+            { "HowToPlayWindow", "HOWTOPLAY_UI_HOWIMOVE_TITLE_PC" },
+            { "TreasureMapWindow", "GLOBAL_CODE_MAP" },
+            { "ZenJukeboxWindow", "EXTRAS_UI_ZEN_JUKEBOX" },
+            { "LoadingWindow", "LOADING_CODE_LOADING" },
+        };
 
-            // Split camel case for speech: "BurnerSMS" -> "Burner SMS".
-            StringBuilder builder = new StringBuilder();
-            for (int i = 0; i < name.Length; i++)
-            {
-                char c = name[i];
-                if (i > 0 && char.IsUpper(c) && !char.IsUpper(name[i - 1]))
-                    builder.Append(' ');
-                builder.Append(c);
-            }
+        /// <summary>
+        /// Spoken title for a window, or empty to announce only its content. Windows
+        /// the game gives no title (tutorials, popups, posters, the phone, whose
+        /// screens carry their own headings) are not named: a name invented from the
+        /// GameObject would be English in every language and add nothing the
+        /// content doesn't already say.
+        /// </summary>
+        private static string WindowTitle(string windowName)
+        {
+            if (windowName == "MainMenuWindow")
+                return Loc.Get("window_main_menu");
 
-            return builder.ToString();
+            string key;
+            if (_windowTitleKeys.TryGetValue(windowName, out key))
+                return GameRefs.GameText(key);
+
+            return string.Empty;
         }
     }
 }

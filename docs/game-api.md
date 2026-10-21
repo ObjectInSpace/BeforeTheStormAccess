@@ -14,6 +14,39 @@ accessor/alias in `GameRefs.cs`.
 - Localization: NGUI Localization clone `T_A7F32A9D`, `Get(key)` / `Get(key, sheet)`.
 - Text assets: `StreamingAssets\Localization\`.
 
+## Localization sheets
+
+- Layout: `StreamingAssets\Localization\{LANG}\{sheet}.lsb`, LANG = EN, DE, ES,
+  ES_MX, FR, IT, PT, JA, ZH_HANS. `global.lsb` (~4,540 keys) is always loaded;
+  per-scene sheets (`e1_s01_a` ...) load with their scene.
+- Format (`T_A7F32A9D._13D63D541`): u16 count, u32 values offset; then count
+  key-length bytes, count u16 value lengths, keys, values (UTF-8). Everything
+  after byte `count*3+6` is XORed with the 32-byte key in `T_3EF937CB`.
+  `scripts\dump_game_strings.py` decodes it.
+- `Get` returns "" for a missing key. Some keys hold untranslated placeholders
+  like `[PH-FR] You are offline.` — `GameRefs.GameText` treats those as missing.
+- Key names: the keybinding row `T_55D727DD._1563A3097(KeyCode)` maps keys to
+  `GLOBAL_CODE_KEY_*` / `GLOBAL_CODE_*_MOUSE_BUTTON*`, digits for Alpha0-9,
+  bare symbols for punctuation, else `KeyCode.ToString()`. Mirrored in
+  `FocusHandler._gameKeyNames`.
+- Game keys the mod speaks (`Loc.Game`, window titles, key names), all verified
+  present in all nine languages:
+  - Backtalk term: `HOWTOPLAY_UI_BACKTALK_TITLE_PC` (FR Insolence, DE Widerworte,
+    ES insolencias, ES_MX Réplica, IT Insolenza, PT Bate-boca, JA バックトーク,
+    ZH 争辩). Translations use these terms in their own sentences too.
+  - Choices: `SCENESELECTION_UI_CHOICES` (live choice heading),
+    `EXTRAS_UI_CHOICES` "Your Choices" (recap title).
+  - Interact fallback: `SETTINGS_UI_KEYBIND_INTERACT`.
+  - Window titles: `SETTINGS_UI_KEYBIND_PAUSE`, `MAINMENU_UI_SETTINGS`,
+    `GLOBAL_CODE_JOURNAL`, `MAINMENU_UI_EPISODES`, `MAINMENU_UI_EXTRAS`,
+    `EXTRAS_UI_CREDITS`, `HOWTOPLAY_UI_HOWIMOVE_TITLE_PC`, `GLOBAL_CODE_MAP`,
+    `EXTRAS_UI_ZEN_JUKEBOX`, `LOADING_CODE_LOADING`. No title exists for the
+    main menu (mod string `window_main_menu`).
+  - Also used: `JOURNAL_CODE_SMS_ME`, scene `nameKey`s, verb/hotspot keys.
+- Useful but unused: `CHOICEWINDOW_WORLDSTATS` / `CHOICEWINDOW_FRIENDSTATS`,
+  `GLOBAL_CODE_UNAVAILABLE`, `BTTUTORIAL_CODE_START_BT`,
+  `TUTORIAL_CODE_INTERACT_PC` ("hold [Button1] and press [Button2]").
+
 ## Core singletons
 
 - `T_A6E913D1` GameManager — static `Instance`. Fields: `m_inputManager`,

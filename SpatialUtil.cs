@@ -51,7 +51,7 @@ namespace BeforeTheStormAccess
         /// <summary>Distance formatted for speech: one decimal under 10 meters.</summary>
         public static string FormatDistance(float meters)
         {
-            return meters < 10f ? meters.ToString("0.0") : Mathf.RoundToInt(meters).ToString();
+            return meters < 10f ? Loc.FormatNumber(meters, "0.0") : Mathf.RoundToInt(meters).ToString();
         }
 
         /// <summary>

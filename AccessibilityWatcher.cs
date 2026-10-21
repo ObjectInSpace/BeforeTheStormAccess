@@ -248,7 +248,10 @@ namespace BeforeTheStormAccess
             if (body.Length == 0)
                 return string.Empty;
 
-            return Loc.Get(isBacktalk ? "backtalk_prefix" : "choices_prefix") + " " + body;
+            string heading = isBacktalk
+                ? Loc.Game("HOWTOPLAY_UI_BACKTALK_TITLE_PC", "Backtalk")
+                : Loc.Game("SCENESELECTION_UI_CHOICES", "Choices");
+            return Loc.Get("heading", heading) + " " + body;
         }
 
         private static string BuildChoiceBody(T_6876113C choiceUI, out string signature, out int selectedIndex)

@@ -95,7 +95,7 @@ namespace BeforeTheStormAccess
                 ? TextUtil.CleanLabel(window.m_episodeTitle.text)
                 : string.Empty;
 
-            speech.Append(Loc.Get("choices_recap_prefix"));
+            speech.Append(Loc.Game("EXTRAS_UI_CHOICES", "Your Choices")).Append(".");
             if (title.Length > 0)
             {
                 speech.Append(" ").Append(title).Append(".");

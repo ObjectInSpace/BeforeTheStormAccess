@@ -107,6 +107,33 @@ namespace BeforeTheStormAccess
             }
         }
 
+        /// <summary>
+        /// The game's own translation of a global-sheet localization key, in the
+        /// player's current text language. Empty when the key is missing, when the
+        /// localization system is unavailable, or when the game shipped an
+        /// untranslated "[PH-xx]" placeholder for that language.
+        /// </summary>
+        public static string GameText(string key)
+        {
+            string text;
+            try
+            {
+                if (!T_A7F32A9D.s_useLocalization)
+                    return string.Empty;
+                text = T_A7F32A9D.Get(key);
+            }
+            catch (System.Exception ex)
+            {
+                Main.Log.LogWarning("GameText: lookup of '" + key + "' failed: " + ex.Message);
+                return string.Empty;
+            }
+
+            if (string.IsNullOrEmpty(text) || text.StartsWith("[PH-"))
+                return string.Empty;
+
+            return TextUtil.CleanLabel(text);
+        }
+
         /// <summary>Fetches a UI window by its registered name, or null when unavailable.</summary>
         public static TWindow GetWindow<TWindow>(string name) where TWindow : T_D25B278
         {

@@ -282,7 +282,7 @@ namespace BeforeTheStormAccess
                 }
             }
 
-            return Loc.Get("key_unknown");
+            return Loc.Game("SETTINGS_UI_KEYBIND_INTERACT", "Interact");
         }
 
         private static T_6FD30C1C GetInteractHotspot()

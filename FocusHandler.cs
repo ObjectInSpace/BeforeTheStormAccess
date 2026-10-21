@@ -260,26 +260,63 @@ namespace BeforeTheStormAccess
         }
 
         /// <summary>
-        /// Speech-friendly key names for the common bindings; falls back to the
-        /// KeyCode name with camel-case splits ("LeftShift" -> "Left Shift").
+        /// Localization keys the game's own keybinding row uses to name keys, so the
+        /// mod speaks the same translated names the settings screen shows.
+        /// </summary>
+        private static readonly Dictionary<KeyCode, string> _gameKeyNames = new Dictionary<KeyCode, string>
+        {
+            { KeyCode.Mouse0, "GLOBAL_CODE_LEFT_MOUSE_BUTTON" },
+            { KeyCode.Mouse1, "GLOBAL_CODE_RIGHT_MOUSE_BUTTON" },
+            { KeyCode.Mouse2, "GLOBAL_CODE_MIDDLE_MOUSE_BUTTON" },
+            { KeyCode.Mouse3, "GLOBAL_CODE_MOUSE_BUTTON_3" },
+            { KeyCode.Mouse4, "GLOBAL_CODE_MOUSE_BUTTON_4" },
+            { KeyCode.Mouse5, "GLOBAL_CODE_MOUSE_BUTTON_5" },
+            { KeyCode.UpArrow, "GLOBAL_CODE_KEY_UPARROW" },
+            { KeyCode.DownArrow, "GLOBAL_CODE_KEY_DOWNARROW" },
+            { KeyCode.LeftArrow, "GLOBAL_CODE_KEY_LEFTARROW" },
+            { KeyCode.RightArrow, "GLOBAL_CODE_KEY_RIGHTARROW" },
+            { KeyCode.RightAlt, "GLOBAL_CODE_KEY_RIGHTALT" },
+            { KeyCode.LeftAlt, "GLOBAL_CODE_KEY_LEFTALT" },
+            { KeyCode.RightControl, "GLOBAL_CODE_KEY_RIGHTCTRL" },
+            { KeyCode.LeftControl, "GLOBAL_CODE_KEY_LEFTCTRL" },
+            { KeyCode.Delete, "GLOBAL_CODE_KEY_DELETE" },
+            { KeyCode.End, "GLOBAL_CODE_KEY_END" },
+            { KeyCode.Return, "GLOBAL_CODE_KEY_ENTER" },
+            { KeyCode.Home, "GLOBAL_CODE_KEY_HOME" },
+            { KeyCode.Insert, "GLOBAL_CODE_KEY_INSERT" },
+            { KeyCode.PageUp, "GLOBAL_CODE_KEY_PAGEUP" },
+            { KeyCode.PageDown, "GLOBAL_CODE_KEY_PAGEDOWN" },
+            { KeyCode.RightShift, "GLOBAL_CODE_KEY_RIGHTSHIFT" },
+            { KeyCode.LeftShift, "GLOBAL_CODE_KEY_LEFTSHIFT" },
+            { KeyCode.Space, "GLOBAL_CODE_KEY_SPACE" },
+            { KeyCode.Tab, "GLOBAL_CODE_KEY_TAB" },
+        };
+
+        /// <summary>
+        /// Speech-friendly key name in the game's text language: the game's own
+        /// translated name where it has one, digits for number-row keys, otherwise
+        /// the KeyCode name with camel-case splits (letters and F-keys need no
+        /// translation).
         /// </summary>
         internal static string PrettyKeyName(KeyCode key)
         {
-            switch (key)
-            {
-                case KeyCode.None:
-                    return Loc.Get("key_unbound");
-                case KeyCode.Mouse0:
-                    return Loc.Get("key_left_mouse");
-                case KeyCode.Mouse1:
-                    return Loc.Get("key_right_mouse");
-                case KeyCode.Mouse2:
-                    return Loc.Get("key_middle_mouse");
-                case KeyCode.BackQuote:
-                    return Loc.Get("key_grave");
-            }
+            if (key == KeyCode.None)
+                return Loc.Get("key_unbound");
+            if (key == KeyCode.BackQuote)
+                return Loc.Get("key_grave");
 
             string name = key.ToString();
+            string gameKey;
+            if (_gameKeyNames.TryGetValue(key, out gameKey))
+            {
+                string gameName = GameRefs.GameText(gameKey);
+                if (gameName.Length > 0)
+                    return gameName;
+            }
+
+            if (key >= KeyCode.Alpha0 && key <= KeyCode.Alpha9)
+                return ((int)(key - KeyCode.Alpha0)).ToString();
+
             StringBuilder builder = new StringBuilder();
             for (int i = 0; i < name.Length; i++)
             {

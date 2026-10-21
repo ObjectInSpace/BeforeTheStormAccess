@@ -45,9 +45,14 @@
     </Reference>
   </ItemGroup>
 
+  <ItemGroup>
+    <TranslationFile Include="Translations\*.txt" />
+  </ItemGroup>
+
   <Target Name="CopyToPlugins" AfterTargets="Build" Condition="'$(SkipCopyToPlugins)' != 'true'">
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(GameDir)\BepInEx\plugins\" />
-    <Message Text="Copied $(TargetFileName) to BepInEx plugins folder" Importance="High" />
+    <Copy SourceFiles="@(TranslationFile)" DestinationFolder="$(GameDir)\BepInEx\plugins\" />
+    <Message Text="Copied $(TargetFileName) and translation files to BepInEx plugins folder" Importance="High" />
   </Target>
 
 </Project>

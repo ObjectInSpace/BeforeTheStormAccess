@@ -1,24 +1,34 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
+using System.Text;
 
 namespace BeforeTheStormAccess
 {
     /// <summary>
-    /// Localization for mod speech. English is embedded; other languages load from
-    /// optional override files next to the plugin DLL named
-    /// "BeforeTheStormAccess.strings.{lang}.txt" (UTF-8, one "key=value" per line,
-    /// # comments). The active language follows the game's text-language setting
+    /// Localization for mod speech, in two layers:
+    /// 1. Game strings (<see cref="Game"/>): words the game already translates into
+    ///    all nine of its languages (key names, "Backtalk", "Journal", window titles)
+    ///    are read from its own localization sheets, so they need no mod translation
+    ///    and always match the game's official terminology.
+    /// 2. Mod strings (<see cref="Get(string)"/>): sentences only the mod speaks.
+    ///    English is embedded; other languages load from
+    ///    "BeforeTheStormAccess.strings.{lang}.txt" next to the plugin DLL (UTF-8,
+    ///    one "key=value" per line, # comments). Missing keys fall back to English.
+    /// The active language follows the game's text-language setting
     /// (T_A7F32A9D.s_language) and switches live via the game's language-changed
-    /// callback. Missing keys fall back to English.
+    /// callback.
     /// </summary>
     public static class Loc
     {
         private static bool _initialized;
         private static string _currentLang = "en";
+        private static CultureInfo _culture = CultureInfo.InvariantCulture;
 
         private static readonly Dictionary<string, string> _english = new Dictionary<string, string>();
         private static readonly Dictionary<string, string> _overrides = new Dictionary<string, string>();
+        private static readonly HashSet<string> _missingGameKeys = new HashSet<string>();
 
         /// <summary>
         /// Initializes the string tables, selects the active language, and hooks
@@ -62,6 +72,8 @@ namespace BeforeTheStormAccess
                     writer.WriteLine("# Copy to BeforeTheStormAccess.strings.{lang}.txt (e.g. .de.txt, .fr.txt,");
                     writer.WriteLine("# .es.txt, .es-mx.txt, .it.txt, .pt.txt, .zh-hans.txt, .ja.txt) and");
                     writer.WriteLine("# translate the part after each equals sign. {0}-style placeholders must stay.");
+                    writer.WriteLine("# Save as UTF-8. Keys left out fall back to English.");
+                    writer.WriteLine("# Use the game's own terms (e.g. its word for Backtalk) so speech matches the game.");
                     foreach (KeyValuePair<string, string> pair in _english)
                     {
                         writer.WriteLine(pair.Key + "=" + pair.Value);
@@ -96,7 +108,71 @@ namespace BeforeTheStormAccess
                 return;
 
             _currentLang = lang;
+            _culture = CultureFor(lang);
+            _missingGameKeys.Clear();
             LoadOverrides(lang);
+        }
+
+        /// <summary>
+        /// Number-formatting culture for a game language code, so decimals read with
+        /// the separator a speaker of that language expects (2,5 in French, 2.5 in
+        /// English). Invariant when the runtime lacks the culture data.
+        /// </summary>
+        private static CultureInfo CultureFor(string lang)
+        {
+            string name;
+            switch (lang)
+            {
+                case "de": name = "de-DE"; break;
+                case "es": name = "es-ES"; break;
+                case "es-mx": name = "es-MX"; break;
+                case "fr": name = "fr-FR"; break;
+                case "it": name = "it-IT"; break;
+                case "pt": name = "pt-BR"; break;
+                case "ja": name = "ja-JP"; break;
+                case "zh-hans": name = "zh-CN"; break;
+                default: return CultureInfo.InvariantCulture;
+            }
+
+            try
+            {
+                return new CultureInfo(name);
+            }
+            catch (Exception ex)
+            {
+                Main.Log.LogWarning("Loc: culture '" + name + "' unavailable, using invariant numbers: " + ex.Message);
+                return CultureInfo.InvariantCulture;
+            }
+        }
+
+        /// <summary>
+        /// Formats a number with the current language's decimal separator.
+        /// </summary>
+        public static string FormatNumber(float value, string format)
+        {
+            if (!_initialized)
+                Initialize();
+            return value.ToString(format, _culture);
+        }
+
+        /// <summary>
+        /// The game's own translation of a global-sheet key (see docs\game-api.md,
+        /// "Localization sheets"), for words the game already translates. Falls back
+        /// to <paramref name="englishFallback"/> only if the game has no text for the
+        /// key in the current language; that case is logged once per key.
+        /// </summary>
+        public static string Game(string gameKey, string englishFallback)
+        {
+            if (!_initialized)
+                Initialize();
+
+            string text = GameRefs.GameText(gameKey);
+            if (text.Length > 0)
+                return text;
+
+            if (_missingGameKeys.Add(gameKey))
+                Main.Log.LogWarning("Loc: game has no '" + _currentLang + "' text for " + gameKey + "; using English.");
+            return englishFallback;
         }
 
         /// <summary>The currently selected language code (lowercase, e.g. "en", "de", "zh-hans").</summary>
@@ -160,7 +236,7 @@ namespace BeforeTheStormAccess
                     return;
                 }
 
-                string[] lines = File.ReadAllLines(file);
+                string[] lines = File.ReadAllLines(file, Encoding.UTF8);
                 for (int i = 0; i < lines.Length; i++)
                 {
                     string line = lines[i].Trim();
@@ -232,16 +308,18 @@ namespace BeforeTheStormAccess
             Add("dir_down", "down");
             Add("dir_left", "left");
 
-            Add("choices_prefix", "Choices:");
-            Add("backtalk_prefix", "Backtalk:");
+            // "{label}:" before a list, e.g. the game's "Choices" or "Backtalk".
+            // Punctuation only, but it varies by language (French "{0} :").
+            Add("heading", "{0}:");
             Add("choice_entry", "{0}: {1}");
 
-            // End-of-episode choices recap (ChoicesWindow).
-            Add("choices_recap_prefix", "Choices for");
+            // End-of-episode choices recap (ChoicesWindow). Its title is the game's
+            // own "Your Choices" (EXTRAS_UI_CHOICES).
             Add("choices_decision", "Decision {0}:");
             Add("choices_you_chose", "you chose {0}");
             Add("choices_alternative", "The other option: {0}");
-            Add("choices_option_stat", "{0}, {1} percent");
+            // Screen readers speak "%" in the user's language, so no word to translate.
+            Add("choices_option_stat", "{0}, {1}%");
             // Spoken once per recap when the world/friends percentages are absent.
             // They come from the online stats server, so they are unavailable offline
             // or when not signed in.
@@ -253,12 +331,14 @@ namespace BeforeTheStormAccess
             Add("sms_contact_unread", "{0}, {1}");
 
             Add("window_opened", "{0} window.");
+            // Window titles come from the game's sheet where it has one (WindowWatcher);
+            // the main menu has no title string in the game.
+            Add("window_main_menu", "Main menu");
             Add("diagnostics_dumped", "Diagnostics written to log.");
 
             Add("out_of_range", "out of range");
             Add("hotspot_nearby", "{0} nearby.");
             Add("interact_hint", "Hold {0}, then press the action's direction key.");
-            Add("key_unknown", "the interact key");
             Add("no_hotspots", "No interactive objects found nearby.");
             Add("no_browser_target", "No object selected. Press right bracket to find the nearest object.");
             Add("hotspot_cycle", "{0} of {1}: {2}, {3}.");
@@ -296,12 +376,12 @@ namespace BeforeTheStormAccess
             Add("nav_tick_hour", "{0} o'clock, {1} meters");
             Add("nav_tick_dist", "{0} meters");
 
-            Add("slider_percent", "{0} percent");
+            Add("slider_percent", "{0}%");
             Add("press_key_to_bind", "press a key to bind");
+            // Other key names come from the game's sheet (FocusHandler.PrettyKeyName);
+            // the game has none for an empty binding, and shows ` as a bare symbol
+            // that screen readers often skip.
             Add("key_unbound", "unbound");
-            Add("key_left_mouse", "left mouse button");
-            Add("key_right_mouse", "right mouse button");
-            Add("key_middle_mouse", "middle mouse button");
             Add("key_grave", "grave accent");
         }
     }

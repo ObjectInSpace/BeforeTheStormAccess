@@ -63,11 +63,21 @@ guidance progress interval.
 
 ## Translations
 
-The mod speaks the game's text language when a translation file exists. Copy
-BepInEx\plugins\BeforeTheStormAccess.strings.template.txt to
-BeforeTheStormAccess.strings.de.txt (or .fr/.es/.es-mx/.it/.pt/.zh-hans/.ja)
-in the same folder and translate the values after the equals signs.
-Placeholders like {0} must remain. Missing keys fall back to English.
+The mod speaks in the game's text language (Settings, Text language) and
+switches when you change it. All nine of the game's languages are included:
+English, German, Mexican Spanish, Spanish, French, Italian, Brazilian
+Portuguese, Simplified Chinese and Japanese.
+
+Where the game already has a word, such as key names, window titles, or its
+names for Backtalk and Choices, the mod uses the game's own translation, so
+speech matches what is on screen. The mod's own sentences live in
+BepInEx\plugins\BeforeTheStormAccess.strings.{language}.txt files, which you
+can edit. To improve a translation, change the text after the equals sign.
+Placeholders like {0} must remain, and any line you remove falls back to
+English. A complete, current list of English strings is written to
+BeforeTheStormAccess.strings.template.txt in the same folder each time the
+game starts. Developers can run scripts\Check-Translations.ps1 to check every
+translation file for missing keys or broken placeholders.
 
 ## Troubleshooting
 
